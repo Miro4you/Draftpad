@@ -49,12 +49,23 @@ export class DeleteTool implements Tool {
     if (st.k !== 'drag') return;
     this.move(ev);
     this.state = { k: 'idle' };
-    if (st.marked.size) {
+    const marked = this.withMirrors(st.marked.values());
+    if (marked.size) {
       this.app.doc.begin();
-      for (const id of st.marked.keys()) this.app.doc.remove(id);
+      for (const id of marked.keys()) this.app.doc.remove(id);
       this.app.doc.commit();
     }
     this.app.requestOverlay();
+  }
+
+  /** The objects plus their mirror images at the active symmetry axes. */
+  private withMirrors(list: Iterable<Entity>): Map<string, Entity> {
+    const out = new Map<string, Entity>();
+    for (const e of list) {
+      out.set(e.id, e);
+      for (const { twin } of this.app.mirrorTwins(e)) out.set(twin.id, twin);
+    }
+    return out;
   }
 
   cancel(): void {
@@ -78,7 +89,7 @@ export class DeleteTool implements Tool {
 
   overlay(): void {
     const st = this.state;
-    if (st.k === 'drag') this.app.paintHighlight(st.marked.values(), DANGER, 0.55);
-    else if (this.hover_ && this.app.doc.get(this.hover_.id)) this.app.paintHighlight([this.hover_], DANGER, 0.3);
+    if (st.k === 'drag') this.app.paintHighlight(this.withMirrors(st.marked.values()).values(), DANGER, 0.55);
+    else if (this.hover_ && this.app.doc.get(this.hover_.id)) this.app.paintHighlight(this.withMirrors([this.hover_]).values(), DANGER, 0.3);
   }
 }

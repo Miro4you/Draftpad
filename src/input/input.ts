@@ -2,6 +2,7 @@ import type { App } from '../app';
 import { dist, type Vec } from '../core/geom';
 import type { PointerKind, ToolEvent } from '../tools/tool';
 import { deleteSelection, duplicateSelection, nudgeSelection } from '../tools/selection-actions';
+import { releaseTextFocus } from '../ui/dom';
 
 /** Touches wider than this (CSS px) are treated as a resting palm, not a finger. */
 const PALM_WIDTH_PX = 120;
@@ -89,6 +90,10 @@ export class InputController {
 
   private onDown = (e: PointerEvent): void => {
     const type = this.kind(e);
+    // Drawing never needs a text field: drop a leftover focus (and with it the keyboard),
+    // and keep this press from moving the focus anywhere.
+    releaseTextFocus();
+    if (type !== 'mouse') e.preventDefault();
     this.setAlt(e.altKey);
     if (type !== 'touch') this.setShift(e.shiftKey);
     if (type === 'touch') {

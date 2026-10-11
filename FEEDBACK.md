@@ -20,3 +20,5 @@ Gesammelte Rückmeldungen vom iPad-Test und ihr Stand.
 | 13 | Schraffur: offene Stellen rot markieren | ✓ lose Linienenden 2,5 s rot, nahe Paare gestrichelt verbunden |
 | 14 | Schraffur passt sich bei neuer Geometrie an | ✓ neue Bohrungen werden ausgespart, Teilungslinien lassen beide Seiten schraffiert, offene Kontur → Schraffur bleibt |
 | 15 | Normteil-Bibliothek | ✓ Durchgangs- und Gewindebohrung, Zylinder- und Sechskantschraube, Mutter, Rillenkugellager, Sicherungsring-Nuten (Taste I, Sonderwerkzeuge) |
+| 16 | iPad: Tastatur klappt beim Zeichnen/Trimmen auf | ✓ abgesichert: Aufsetzen auf der Zeichenfläche nimmt Textfeldern den Fokus, Dialoge geben ihn beim Schließen frei – bitte beobachten |
+| 17 | Trimmen spiegeln | ✓ auch „Objekt löschen“; nur bei aktiver Spiegelung |

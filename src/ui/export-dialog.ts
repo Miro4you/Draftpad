@@ -4,7 +4,7 @@ import { loadPref, savePref } from '../storage/idb';
 import { baseDialog } from './dialogs';
 import { findSheet } from './sheet-dialog';
 import { scaleText } from '../core/annotations';
-import { h } from './dom';
+import { h, releaseTextFocus } from './dom';
 
 interface ExportPrefs {
   format: ExportFormat;
@@ -140,6 +140,7 @@ export function showExportDialog(app: App): void {
   const ok = h('button', { class: 'dlg-btn primary', text: 'Exportieren' });
   actions.append(cancel, ok);
   const close = () => {
+    releaseTextFocus();
     dlg.close();
     dlg.remove();
   };

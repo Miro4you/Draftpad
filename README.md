@@ -28,7 +28,7 @@ Das vollständige Konzept und der Phasenplan stehen in [CONCEPT.md](CONCEPT.md).
 - Bogen: am Startpunkt in die gewünschte Startrichtung losziehen, dann zum Endpunkt – auf Linien, Bögen und Kreisen (Ende, Mitte oder irgendwo darauf) tangential vor- oder rückwärts, im freien Raum in Zugrichtung (rastet wie Linien); zurück zum Start wählt die Richtung neu; Variante „Bogen um Mittelpunkt“: Mittelpunkt → Radius → Winkel
 - Fang zusätzlich an Kreismittelpunkten, Quadrantenpunkten, Bogenenden und Schnittpunkten mit Kreisen/Bögen
 - Symmetrieachsen: jede Strich-Punkt-Linie wird automatisch Achse, eigenes Achsenkreuz-Werkzeug, oder Linie auswählen → „Symmetrieachse“; alles Neue wird live gespiegelt, bei zwei Achsen in alle vier Quadranten; Knopf an der Achse schaltet das Spiegeln an/aus
-- Löschen: ganze Objekte (antippen oder drüberwischen), Trimmen bis zum nächsten Schnittpunkt (antippen oder quer drüberwischen), Radierer, der Linien, Kreise und Striche zerteilt
+- Löschen: ganze Objekte (antippen oder drüberwischen), Trimmen bis zum nächsten Schnittpunkt (antippen oder quer drüberwischen), Radierer, der Linien, Kreise und Striche zerteilt; Objekt löschen und Trimmen wirken bei aktiver Spiegelung auch auf die Spiegelbilder
 - Auswahl: antippen (mehrere nacheinander), Schlinge, Verschieben mit Fang, Drehknopf, Griffe an Linien, Kreisen und Bögen; Leiste mit Duplizieren, 90° drehen, Spiegeln, Ebene wechseln, Achse, Mittellinien, Löschen
 - Stift, Linienart und Farbe wirken auch auf die Auswahl
 - Farben: Standard (Graphit/Schwarz), zehn Farben oder eigene Farbe

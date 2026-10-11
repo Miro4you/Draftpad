@@ -19,7 +19,7 @@ import { DimTool } from './tools/dim';
 import { FilletTool } from './tools/fillet';
 import { RectTool } from './tools/rect';
 import { TextTool } from './tools/text';
-import { TraceTool } from './tools/trace';
+import { sameGeometry, TraceTool } from './tools/trace';
 import { PartTool } from './tools/part';
 import type { PartSpec } from './core/parts';
 import { GpsTool } from './tools/gps';
@@ -482,13 +482,39 @@ export class App {
     }
   }
 
+  /**
+   * Counterparts of an existing entity at the active symmetry axes: entities whose
+   * shape is its mirror image (with the transform that maps it there). The entity
+   * itself is included when it is its own mirror image (e.g. a line across the axis).
+   */
+  mirrorTwins(e: Entity): { twin: Entity; m: Affine }[] {
+    const out: { twin: Entity; m: Affine }[] = [];
+    // Axes are never mirrored (as when drawing).
+    if (isAnnotation(e) || (e.kind === 'line' && e.axis)) return out;
+    for (const m of this.mirrors()) {
+      const img = transformEntity(e, m);
+      const bx = boxExpand(entityBox(img), 0.01);
+      for (const c of this.doc.visibleEntities(false)) {
+        if (c.kind !== e.kind || !boxesIntersect(entityBox(c), bx)) continue;
+        if (sameGeometry(c, img)) out.push({ twin: c, m });
+      }
+    }
+    return out;
+  }
+
   /** Add new entities together with their mirrored copies as one undo step. */
   addDrawn(...entities: Entity[]): void {
     this.doc.begin();
     for (const e of entities) {
       this.doc.add(e);
       if (!mirrorable(e)) continue;
-      for (const c of this.mirrorCopies(e)) this.doc.add({ ...c, z: this.doc.allocZ() });
+      // A shape symmetric to the axis (e.g. a line across it) is its own mirror image: no duplicates.
+      const placed: Entity[] = [e];
+      for (const c of this.mirrorCopies(e)) {
+        if (placed.some((p) => sameGeometry(p, c))) continue;
+        placed.push(c);
+        this.doc.add({ ...c, z: this.doc.allocZ() });
+      }
     }
     this.doc.commit();
   }

@@ -15,7 +15,7 @@ import {
   type CloudEntry,
 } from '../storage/cloud';
 import { ask, baseDialog } from './dialogs';
-import { h } from './dom';
+import { h, releaseTextFocus } from './dom';
 
 /** Small PNG preview of the drawing as a data URL (about 320 px wide). */
 async function thumbnail(app: App): Promise<string | undefined> {
@@ -90,6 +90,7 @@ export function showCloudDialog(app: App): void {
   const close = h('button', { class: 'dlg-btn', text: 'Schließen' });
   actions.append(close);
   const done = () => {
+    releaseTextFocus();
     dlg.close();
     dlg.remove();
   };

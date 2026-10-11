@@ -1,5 +1,6 @@
 import type { App } from '../app';
-import { cutParams, entityLength, intersectSegment, project, removeRanges, subEntity, trimRange } from '../core/curves';
+import { cutParams, entityLength, intersectSegment, pointAt, project, removeRanges, subEntity, trimRange } from '../core/curves';
+import { applyAffine } from '../core/transform';
 import { newId } from '../core/document';
 import { dist, type Vec } from '../core/geom';
 import { isAnnotation, type Entity } from '../core/types';
@@ -17,6 +18,7 @@ type State = { k: 'idle' } | { k: 'drag'; last: Vec; path: Vec[]; marks: Map<str
  * Trim: removes the piece of an object between its nearest intersections with
  * other objects. Tap a piece, or swipe across several pieces to trim them all.
  * Circles become arcs; an object without intersections is removed completely.
+ * With mirroring on, the mirror images of the pieces are trimmed as well.
  */
 export class TrimTool implements Tool {
   readonly id = 'trim';
@@ -50,6 +52,25 @@ export class TrimTool implements Tool {
   private pieceUnder(world: Vec, ev: ToolEvent): Piece | null {
     const hit = this.app.hitEntity(world, ev.pointerType);
     return hit && !isAnnotation(hit.e) ? this.pieceAt(hit.e, hit.s) : null;
+  }
+
+  /**
+   * The pieces plus their mirror images at the active symmetry axes: the twin of
+   * each object is trimmed where the mirror image of the piece's middle lies.
+   */
+  private withMirrors(marks: Map<string, Piece[]>): Map<string, Piece[]> {
+    if (!this.app.mirrors().length) return marks;
+    const out = new Map<string, Piece[]>();
+    for (const list of marks.values()) {
+      for (const p of list) {
+        this.mark(out, p);
+        const mid = pointAt(p.e, (p.range[0] + p.range[1]) / 2);
+        for (const { twin, m } of this.app.mirrorTwins(p.e)) {
+          this.mark(out, this.pieceAt(twin, project(twin, applyAffine(m, mid)).s));
+        }
+      }
+    }
+    return out;
   }
 
   private mark(marks: Map<string, Piece[]>, p: Piece): void {
@@ -87,10 +108,11 @@ export class TrimTool implements Tool {
     if (st.k !== 'drag') return;
     this.move(ev);
     this.state = { k: 'idle' };
-    if (st.marks.size) {
+    const marks = this.withMirrors(st.marks);
+    if (marks.size) {
       const doc = this.app.doc;
       doc.begin();
-      for (const pieces of st.marks.values()) {
+      for (const pieces of marks.values()) {
         const e = pieces[0].e;
         if (!doc.get(e.id)) continue;
         const rest = removeRanges(
@@ -138,11 +160,15 @@ export class TrimTool implements Tool {
     const st = this.state;
     if (st.k === 'drag') {
       const pieces: Entity[] = [];
-      for (const list of st.marks.values()) for (const p of list) pieces.push(this.pieceEntity(p));
+      for (const list of this.withMirrors(st.marks).values()) for (const p of list) pieces.push(this.pieceEntity(p));
       this.app.paintHighlight(pieces, DANGER, 0.6);
       drawFence(ctx, st.path);
     } else if (this.hoverPiece && this.app.doc.get(this.hoverPiece.e.id) === this.hoverPiece.e) {
-      this.app.paintHighlight([this.pieceEntity(this.hoverPiece)], DANGER, 0.35);
+      const pieces: Entity[] = [];
+      for (const list of this.withMirrors(new Map([[this.hoverPiece.e.id, [this.hoverPiece]]])).values()) {
+        for (const p of list) pieces.push(this.pieceEntity(p));
+      }
+      this.app.paintHighlight(pieces, DANGER, 0.35);
     }
   }
 }

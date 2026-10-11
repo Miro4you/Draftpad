@@ -1,7 +1,7 @@
 import { GPS_NAMES, GPS_NEEDS_DATUM, symbolLayout } from '../core/annotations';
 import type { GpsSymbol } from '../core/types';
 import { drawLayout } from '../render/annotations';
-import { h } from './dom';
+import { h, releaseTextFocus } from './dom';
 
 /**
  * In-app replacements for confirm()/prompt(): styled like the rest of the UI and
@@ -25,6 +25,7 @@ export function baseDialog(title: string): { dlg: HTMLDialogElement; body: HTMLE
 }
 
 export function finish<T>(dlg: HTMLDialogElement, resolve: (v: T) => void, value: T): void {
+  releaseTextFocus();
   dlg.close();
   dlg.remove();
   resolve(value);
