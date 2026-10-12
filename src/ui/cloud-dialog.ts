@@ -74,11 +74,31 @@ export function showCloudDialog(app: App): void {
   const updateHint = () => {
     const cur = cloudCurrent();
     const over = !!cur && cur.name === name.value.trim();
+    if (over && app.live?.id === cur.id) {
+      saveBtn.textContent = 'Live';
+      saveBtn.disabled = true;
+      saveHint.textContent = 'Wird live laufend gespeichert. Neuen Namen eingeben, um eine Kopie abzulegen.';
+      return;
+    }
+    saveBtn.disabled = false;
     saveBtn.textContent = over ? 'Überschreiben' : 'Speichern';
     saveHint.textContent = over ? `Ersetzt „${cur!.name}“ auf dem Server.` : 'Wird als neue Zeichnung abgelegt.';
   };
   name.addEventListener('input', updateHint);
+  const liveBar = h('div', { class: 'cloud-live' });
+  if (app.live && app.live.status !== 'off') {
+    const stop = h('button', { class: 'dlg-btn', text: 'Live beenden' });
+    stop.addEventListener('click', () => {
+      app.live?.stop();
+      liveBar.remove();
+      updateHint();
+      void refresh();
+    });
+    const devices = app.live.devices > 1 ? ` mit ${app.live.devices} Geräten` : '';
+    liveBar.append(h('span', { text: `„${app.live.name}“ wird live bearbeitet${devices} und laufend gespeichert.` }), stop);
+  }
   body.append(
+    liveBar,
     status,
     h('div', { class: 'cloud-save' }, [h('label', { class: 'exp-field grow' }, [h('span', { text: 'Aktuelle Zeichnung speichern als' }), name]), saveBtn]),
     saveHint,
@@ -120,6 +140,21 @@ export function showCloudDialog(app: App): void {
   const row = (e: CloudEntry): HTMLElement => {
     const img = e.thumb ? h('img', { class: 'cloud-thumb', src: e.thumb, alt: '' }) : h('div', { class: 'cloud-thumb' });
     const open = h('button', { class: 'dlg-btn', text: 'Öffnen' });
+    const liveOn = app.live?.id === e.id;
+    const liveBtn = h('button', { class: `dlg-btn${liveOn ? ' primary' : ''}`, text: liveOn ? 'Live ✓' : 'Live', title: 'Live bearbeiten: mit anderen Geräten gleichzeitig' });
+    liveBtn.disabled = liveOn;
+    liveBtn.addEventListener('click', async () => {
+      if (
+        app.doc.size > 0 &&
+        cloudCurrent()?.id !== e.id &&
+        !(await ask({ title: 'Zeichnung ersetzen?', message: `„${e.name}“ ersetzt die aktuelle Zeichnung und wird live bearbeitet.`, confirm: 'Live öffnen', danger: true }))
+      ) {
+        return;
+      }
+      app.live?.start(e.id, e.name);
+      done();
+      app.toast(`„${e.name}“ live – auf weiteren Geräten ebenfalls „Live“ wählen`);
+    });
     const del = h('button', { class: 'btn danger', title: 'Löschen', 'aria-label': 'Löschen', text: '✕' });
     open.addEventListener('click', async () => {
       if (
@@ -130,6 +165,7 @@ export function showCloudDialog(app: App): void {
       }
       try {
         const data = await loadCloudDrawing(e.id);
+        app.live?.stop();
         app.loadDrawing(data);
         setCloudCurrent({ id: e.id, name: e.name });
         done();
@@ -153,6 +189,7 @@ export function showCloudDialog(app: App): void {
       img,
       h('div', { class: 'cloud-meta' }, [h('div', { class: 'cloud-name', text: e.name }), h('div', { class: 'cloud-date', text: when(e.updated) })]),
       open,
+      liveBtn,
       del,
     ]);
   };

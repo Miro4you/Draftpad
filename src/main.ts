@@ -10,6 +10,7 @@ import { showExportDialog } from './ui/export-dialog';
 import { editSheet } from './ui/sheet-dialog';
 import { showCloudDialog } from './ui/cloud-dialog';
 import { setCloudCurrent } from './storage/cloud';
+import { LiveSession } from './storage/live';
 
 const root = document.getElementById('app')!;
 const sceneCanvas = h('canvas', { class: 'scene' });
@@ -18,6 +19,7 @@ const ui = h('div', { class: 'ui' });
 root.append(sceneCanvas, overlayCanvas, ui);
 
 const app = new App(sceneCanvas, overlayCanvas);
+app.live = new LiveSession(app);
 new InputController(app, overlayCanvas);
 
 // ---- file actions -------------------------------------------------------------------
@@ -55,6 +57,7 @@ fileInput.addEventListener('change', async () => {
     ) {
       return;
     }
+    app.live?.stop();
     app.loadDrawing(data);
     setCloudCurrent(null);
     app.toast(`„${file.name}“ geöffnet`);
@@ -79,6 +82,7 @@ async function newDrawing(): Promise<void> {
   ) {
     return;
   }
+  app.live?.stop();
   app.newDrawing();
   setCloudCurrent(null);
 }
@@ -86,6 +90,7 @@ async function newDrawing(): Promise<void> {
 document.addEventListener('app:download', download);
 document.addEventListener('app:export', () => showExportDialog(app));
 document.addEventListener('app:part', () => void choosePart(app));
+document.addEventListener('app:cloud', () => showCloudDialog(app));
 document.addEventListener('app:open', open);
 
 // ---- UI -------------------------------------------------------------------------------
@@ -133,7 +138,8 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') void app.saveNow();
 });
 window.addEventListener('pagehide', () => void app.saveNow());
-void app.load();
+// Restore the autosaved drawing, then reconnect a live drawing if one was open.
+void app.load().then(() => app.live?.resume());
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

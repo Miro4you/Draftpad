@@ -9,6 +9,29 @@ export type Change =
   | { t: 'upd'; before: Entity; after: Entity }
   | { t: 'layers'; before: Layer[]; after: Layer[]; activeBefore: string; activeAfter: string };
 
+/**
+ * A change in a form other devices can apply (live editing): entities are put or
+ * deleted as a whole, layers sent as the full list. Applying one twice is harmless.
+ */
+export type SyncOp = { t: 'put'; e: Entity } | { t: 'del'; id: string } | { t: 'layers'; layers: Layer[] };
+
+/** The sync ops of changes (or of undoing them). */
+export function toSyncOps(changes: readonly Change[], inverse = false): SyncOp[] {
+  const list = inverse ? [...changes].reverse() : changes;
+  return list.map((c): SyncOp => {
+    switch (c.t) {
+      case 'add':
+        return inverse ? { t: 'del', id: c.e.id } : { t: 'put', e: c.e };
+      case 'del':
+        return inverse ? { t: 'put', e: c.e } : { t: 'del', id: c.e.id };
+      case 'upd':
+        return { t: 'put', e: inverse ? c.before : c.after };
+      case 'layers':
+        return { t: 'layers', layers: inverse ? c.before : c.after };
+    }
+  });
+}
+
 let idCounter = 0;
 export function newId(prefix: string): string {
   idCounter = (idCounter + 1) % 1e6;
@@ -61,6 +84,7 @@ export class SketchDocument {
   private pending: Change[] | null = null;
   private byLayerCache: { version: number; map: Map<string, Entity[]> } | null = null;
   private listeners = new Set<() => void>();
+  private opListeners = new Set<(ops: SyncOp[]) => void>();
 
   constructor() {
     this.reset();
@@ -77,6 +101,39 @@ export class SketchDocument {
     this.undoStack = [];
     this.redoStack = [];
     this.pending = null;
+    this.touch();
+  }
+
+  /** Called with the sync ops of every committed step, undo and redo (not for remote ops). */
+  onOps(fn: (ops: SyncOp[]) => void): () => void {
+    this.opListeners.add(fn);
+    return () => this.opListeners.delete(fn);
+  }
+
+  private emitOps(ops: SyncOp[]): void {
+    if (ops.length) for (const fn of this.opListeners) fn(ops);
+  }
+
+  /**
+   * Apply changes made on another device: no undo step, no commit hooks. Layers
+   * keep this device's display flags (visible, locked, dimmed).
+   */
+  applyRemote(ops: readonly SyncOp[]): void {
+    for (const op of ops) {
+      if (op.t === 'put') {
+        this.entities.set(op.e.id, op.e);
+        if (op.e.z >= this.nextZ) this.nextZ = op.e.z + 1;
+      } else if (op.t === 'del') {
+        this.entities.delete(op.id);
+      } else if (op.layers.length) {
+        const flags = new Map(this.layers.map((l) => [l.id, l]));
+        this.layers = op.layers.map((l) => {
+          const cur = flags.get(l.id);
+          return cur ? { ...l, visible: cur.visible, locked: cur.locked, dimmed: cur.dimmed } : { ...l };
+        });
+        if (!this.layer(this.activeLayerId)) this.activeLayerId = this.layers[0].id;
+      }
+    }
     this.touch();
   }
 
@@ -167,6 +224,7 @@ export class SketchDocument {
     }
     this.pending = null;
     if (!changes || changes.length === 0) return;
+    this.emitOps(toSyncOps(changes));
     this.undoStack.push(changes);
     if (this.undoStack.length > MAX_HISTORY) this.undoStack.shift();
     this.redoStack = [];
@@ -273,6 +331,7 @@ export class SketchDocument {
     for (let i = changes.length - 1; i >= 0; i--) this.apply(changes[i], true);
     this.redoStack.push(changes);
     this.touch();
+    this.emitOps(toSyncOps(changes, true));
     return true;
   }
 
@@ -283,6 +342,7 @@ export class SketchDocument {
     for (const c of changes) this.apply(c, false);
     this.undoStack.push(changes);
     this.touch();
+    this.emitOps(toSyncOps(changes));
     return true;
   }
 

@@ -31,6 +31,7 @@ export class ViewBar {
   private zoom: HTMLButtonElement;
   private layerBtn: HTMLButtonElement;
   private layerName: HTMLElement;
+  private liveBtn: HTMLButtonElement;
 
   constructor(
     private app: App,
@@ -55,7 +56,10 @@ export class ViewBar {
       layers.close();
       menu.toggle();
     });
-    this.el = h('div', { class: 'viewbar panel' }, [this.compass, this.zoom, this.layerBtn, menuBtn]);
+    this.liveBtn = h('button', { class: 'btn wide live-badge', title: 'Live-Bearbeitung (Online-Ablage)' });
+    this.liveBtn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('app:cloud')));
+    this.el = h('div', { class: 'viewbar panel' }, [this.liveBtn, this.compass, this.zoom, this.layerBtn, menuBtn]);
+    app.live?.onChange(() => this.update());
     app.onUiChange(() => this.update());
     app.onViewChange(() => this.update());
     layers.onToggle = () => this.update();
@@ -72,6 +76,14 @@ export class ViewBar {
     setText(this.zoom, `${Math.round((this.app.cam.scale / MM_PX) * 100)} %`);
     setText(this.layerName, this.app.doc.activeLayer.name);
     this.layerBtn.classList.toggle('active', this.layersPanel.isOpen);
+    const live = this.app.live;
+    const on = !!live && live.status !== 'off';
+    this.liveBtn.hidden = !on;
+    if (on && live) {
+      this.liveBtn.dataset.health = live.health;
+      setText(this.liveBtn, live.label);
+      this.liveBtn.title = `Live: „${live.name}“`;
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 import { Camera } from './core/camera';
 import { intersectSegment, project } from './core/curves';
-import { entityBox, newId, SketchDocument, type Change } from './core/document';
+import { entityBox, newId, SketchDocument, type Change, type SyncOp } from './core/document';
 import { boxExpand, boxesIntersect, boxUnion, drawingAngleDeg, dist, emptyBox, isEmptyBox, type Box, type Vec } from './core/geom';
 import { DEFAULT_STYLE, PAPER_COLORS, penColor, setPenTheme, type Theme } from './core/pens';
 import { findSnap, snapAngle, snapCandidates, softSnapAngle, type AngleMode, type SnapHit } from './core/snap';
@@ -22,6 +22,7 @@ import { TextTool } from './tools/text';
 import { sameGeometry, TraceTool } from './tools/trace';
 import { PartTool } from './tools/part';
 import type { PartSpec } from './core/parts';
+import type { LiveSession } from './storage/live';
 import { GpsTool } from './tools/gps';
 import { FreehandTool } from './tools/freehand';
 import { HATCH_GAPS, HatchTool, isBoundary, refitHatch } from './tools/hatch';
@@ -147,6 +148,8 @@ export class App {
   selection = new Set<string>();
   /** Set by the input controller (Alt key / finger held while drawing with the pen). */
   snapSuspended = false;
+  /** Live editing session (set up by main). */
+  live: LiveSession | null = null;
   /** Shift held: lengths are free (no length steps) while it is down. */
   lengthFree = false;
   /** Pen or mouse hovering over the canvas without contact (screen CSS px). */
@@ -914,6 +917,34 @@ export class App {
     this.selection.clear();
     this.doc.reset();
     this.resetView();
+  }
+
+  /**
+   * Replace the drawing with the server's state of a live drawing: the view, the
+   * active layer and the layers' display flags of this device stay.
+   */
+  applyLiveSnapshot(data: unknown): void {
+    this.tool.reset();
+    const flags = new Map(this.doc.layers.map((l) => [l.id, l]));
+    const active = this.doc.activeLayerId;
+    const view = this.cam.state;
+    this.doc.loadFile(data);
+    for (const l of this.doc.layers) {
+      const f = flags.get(l.id);
+      if (f) this.doc.patchLayerView(l.id, { visible: f.visible, locked: f.locked, dimmed: f.dimmed });
+    }
+    if (this.doc.layer(active)) this.doc.setActiveLayer(active);
+    this.cam.state = view;
+    this.selection = new Set([...this.selection].filter((id) => this.doc.get(id)));
+    this.viewChanged();
+  }
+
+  /** Steps made on another device. */
+  applyRemoteOps(ops: SyncOp[]): void {
+    // A gesture in progress keeps going on its own copy; drop it if its entity vanished.
+    this.doc.applyRemote(ops);
+    for (const id of [...this.selection]) if (!this.doc.get(id)) this.selection.delete(id);
+    this.emit();
   }
 
   loadDrawing(data: unknown): void {

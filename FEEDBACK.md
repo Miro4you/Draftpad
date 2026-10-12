@@ -22,3 +22,4 @@ Gesammelte Rückmeldungen vom iPad-Test und ihr Stand.
 | 15 | Normteil-Bibliothek | ✓ Durchgangs- und Gewindebohrung, Zylinder- und Sechskantschraube, Mutter, Rillenkugellager, Sicherungsring-Nuten (Taste I, Sonderwerkzeuge) |
 | 16 | iPad: Tastatur klappt beim Zeichnen/Trimmen auf | ✓ abgesichert: Aufsetzen auf der Zeichenfläche nimmt Textfeldern den Fokus, Dialoge geben ihn beim Schließen frei – bitte beobachten |
 | 17 | Trimmen spiegeln | ✓ auch „Objekt löschen“; nur bei aktiver Spiegelung |
+| 18 | PC und iPad live an derselben Zeichnung | ✓ Online-Ablage → „Live“ (über den Pi-Server) |

@@ -71,6 +71,10 @@ Auswahl · Linie · Formen (Kreis, Rechteck, Bogen, Bogen um Mittelpunkt, Achsen
 
 Durchgangsbohrung (ISO 273), Gewindebohrung, Zylinderschraube ISO 4762, Sechskantschraube ISO 4017, Sechskantmutter ISO 4032, Rillenkugellager DIN 625 (60xx/62xx), Nuten für Sicherungsringe DIN 471/472 – jeweils mit Größe, Ansicht (Seite/Schnitt oder Draufsicht) und Länge bzw. Tiefe. Das Teil folgt dem Stift und rastet an Mittelpunkten und Linien; Antippen setzt es, Drücken und Ziehen dreht es vorher. Eingefügt werden normale Linien, Kreise und Bögen. Die Maße stammen aus den üblichen Normtabellen – für kritische Maße bitte das Normblatt prüfen.
 
+**Live bearbeiten (PC und iPad gleichzeitig)**
+
+In der Online-Ablage bei einer Zeichnung „Live“ wählen – auf jedem Gerät, das mitmachen soll. Jede fertige Aktion (Linie, Trimmen, Verschieben, Schraffur …) erscheint sofort auf den anderen Geräten, der Pi speichert laufend mit. Ansicht, Werkzeug, Stift und das Ein-/Ausblenden von Ebenen bleiben pro Gerät; Rückgängig betrifft die eigenen Schritte. Bricht die Verbindung ab, sammelt die App die Änderungen und schickt sie nach (auch nach einem Neuladen). Oben rechts zeigt ein Punkt den Zustand (grün = live, gelb = verbinde, rot = offline). Beide Geräte müssen die App über den Pi öffnen.
+
 ## Bedienung
 
 | Eingabe | Aktion |

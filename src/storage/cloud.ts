@@ -32,6 +32,11 @@ export function setCloudConfig(c: CloudConfig): void {
   savePref('cloud', c);
 }
 
+/** Base URL of the server API (no trailing slash). */
+export function apiBase(c: CloudConfig = cloudConfig()): string {
+  return base(c);
+}
+
 function base(c: CloudConfig): string {
   const u = c.url.trim().replace(/\/+$/, '');
   if (!u) return '/api';

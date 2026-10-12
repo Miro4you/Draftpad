@@ -1435,3 +1435,55 @@ p.part-label {
   font-size: 12.5px;
   font-weight: 600;
 }
+
+.viewbar .live-badge {
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.viewbar .live-badge[hidden] {
+  display: none;
+}
+
+.viewbar .live-badge::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2fa36b;
+  content: '';
+}
+
+.viewbar .live-badge[data-health='wait']::before {
+  background: #e3a21a;
+}
+
+.viewbar .live-badge[data-health='bad']::before {
+  background: var(--danger);
+}
+
+.cloud-live {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 13px;
+}
+
+.cloud-live span {
+  flex: 1;
+}
+
+.cloud-item .dlg-btn {
+  padding: 0 12px;
+}
+
+.dlg-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
