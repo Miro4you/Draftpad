@@ -1,3 +1,4 @@
+import { worldWidth } from '../core/scale';
 import type { App } from '../app';
 import { capsuleRanges } from '../core/curves';
 import type { Vec } from '../core/geom';
@@ -38,7 +39,7 @@ export class DeleteTool implements Tool {
     for (const e of this.app.doc.visibleEntities(false)) {
       // Hatch outlines lie on the lines around them: hatches go only when tapped inside.
       if (st.marked.has(e.id) || e.kind === 'hatch') continue;
-      if (capsuleRanges(e, st.last, ev.world, R + e.style.width / 2).length) st.marked.set(e.id, e);
+      if (capsuleRanges(e, st.last, ev.world, R + worldWidth(e) / 2).length) st.marked.set(e.id, e);
     }
     st.last = ev.world;
     this.app.requestOverlay();

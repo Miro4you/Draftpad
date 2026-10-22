@@ -1,3 +1,4 @@
+import { worldWidth } from '../core/scale';
 import type { App } from '../app';
 import { capsuleRanges, project } from '../core/curves';
 import { newId } from '../core/document';
@@ -59,7 +60,7 @@ export class TraceTool implements Tool {
     let best: Traceable | null = null;
     let bd = r;
     for (const e of this.sources()) {
-      const d = Math.max(0, project(e, world).d - e.style.width / 2);
+      const d = Math.max(0, project(e, world).d - worldWidth(e) / 2);
       if (d <= bd) {
         bd = d;
         best = e;
@@ -104,7 +105,7 @@ export class TraceTool implements Tool {
     const R = this.app.hitRadius(ev.pointerType);
     for (const e of this.sources()) {
       if (st.marked.has(e.id)) continue;
-      if (capsuleRanges(e, st.last, ev.world, R + e.style.width / 2).length) st.marked.set(e.id, e);
+      if (capsuleRanges(e, st.last, ev.world, R + worldWidth(e) / 2).length) st.marked.set(e.id, e);
     }
     st.last = ev.world;
     this.app.requestOverlay();

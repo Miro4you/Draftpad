@@ -122,6 +122,8 @@ function applyOps(doc, ops) {
     } else if (op.t === 'layers' && Array.isArray(op.layers) && op.layers.length) {
       doc.layers = op.layers;
       if (!op.layers.some((l) => l.id === doc.activeLayerId)) doc.activeLayerId = op.layers[0].id;
+    } else if (op.t === 'scale' && typeof op.scale === 'number' && op.scale > 0) {
+      doc.scale = op.scale;
     }
   }
   doc.entities = [...byId.values()].sort((a, b) => (a.z || 0) - (b.z || 0));

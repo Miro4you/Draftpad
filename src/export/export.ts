@@ -8,6 +8,7 @@ import { sheetBox } from '../core/annotations';
 import { drawAnno, drawHatch, setKnockout, type DrawCtx } from '../render/annotations';
 import { centerMarks, Painter } from '../render/painter';
 import { traceEntity } from '../render/paths';
+import { drawingScale, worldWidth } from '../core/scale';
 import { toPdf, toSvg, VectorRecorder, type Page } from './vector';
 
 export type ExportFormat = 'pdf' | 'svg' | 'png' | 'jpeg';
@@ -50,7 +51,8 @@ function collect(doc: SketchDocument, opts: ExportOptions): Job {
     }
   }
   if (opts.sheet) return { entities, box: sheetBox(opts.sheet), scale: opts.sheet.scale };
-  return { entities, box: isEmptyBox(box) ? box : boxExpand(box, opts.margin), scale: 1 };
+  const k = drawingScale();
+  return { entities, box: isEmptyBox(box) ? box : boxExpand(box, opts.margin * k), scale: k };
 }
 
 /** Vector drawing of the entities (no pencil grain: clean lines in the pen colour). */
@@ -61,10 +63,11 @@ export function recordVector(entities: { e: Entity; alpha: number }[]): VectorRe
     const s = e.style;
     ctx.globalAlpha = alpha * (s.pen === 'pencil' ? PENCIL_ALPHA : 1);
     ctx.strokeStyle = penColor(s);
-    ctx.lineWidth = s.width;
+    const w = worldWidth(e);
+    ctx.lineWidth = w;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.setLineDash(dashArray(s.lineType, s.width));
+    ctx.setLineDash(dashArray(s.lineType, w));
     ctx.lineDashOffset = dashOffset;
     ctx.beginPath();
     traceEntity(ctx, e);
@@ -74,14 +77,14 @@ export function recordVector(entities: { e: Entity; alpha: number }[]): VectorRe
   for (const { e, alpha } of entities) {
     if (isAnnotation(e)) {
       const a = alpha * (e.style.pen === 'pencil' ? PENCIL_ALPHA : 1);
-      if (e.kind === 'hatch') drawHatch(ctx, e, penColor(e.style), e.style.width, a);
-      else drawAnno(ctx, e, penColor(e.style), e.style.width, a);
+      if (e.kind === 'hatch') drawHatch(ctx, e, penColor(e.style), worldWidth(e), a);
+      else drawAnno(ctx, e, penColor(e.style), worldWidth(e), a);
       continue;
     }
     strokeOne(e, alpha, 0);
     if ((e.kind === 'circle' || e.kind === 'arc') && e.mark) {
       for (const l of centerMarks(e)) {
-        const dash = dashArray(l.style.lineType, l.style.width);
+        const dash = dashArray(l.style.lineType, worldWidth(l));
         const period = dash.reduce((s, v) => s + v, 0);
         const half = Math.hypot(l.b.x - l.a.x, l.b.y - l.a.y) / 2;
         strokeOne(l, alpha, (((dash[0] / 2 - half) % period) + period) % period);

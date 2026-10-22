@@ -3,6 +3,7 @@ import { dist, type Vec } from '../core/geom';
 import type { PointerKind, ToolEvent } from '../tools/tool';
 import { deleteSelection, duplicateSelection, nudgeSelection } from '../tools/selection-actions';
 import { releaseTextFocus } from '../ui/dom';
+import { LINE_TYPES } from '../core/pens';
 
 /** Touches wider than this (CSS px) are treated as a resting palm, not a finger. */
 const PALM_WIDTH_PX = 120;
@@ -421,11 +422,11 @@ export class InputController {
     const digit = /^Digit(\d)$/.exec(e.code);
     if (digit) {
       const n = Number(digit[1]);
+      // 1–4 line types (switched most often), Shift + 1–9 pens, 0 shows everything.
       if (e.shiftKey) {
-        const types = ['solid', 'dashed', 'dashdot', 'dashdotdot', 'freehand'] as const;
-        if (n >= 1 && n <= types.length) app.setStyle({ lineType: types[n - 1] });
-      } else if (n >= 1 && n <= 9) {
-        document.dispatchEvent(new CustomEvent('app:pen', { detail: n - 1 }));
+        if (n >= 1 && n <= 9) document.dispatchEvent(new CustomEvent('app:pen', { detail: n - 1 }));
+      } else if (n >= 1 && n <= LINE_TYPES.length) {
+        app.setStyle({ lineType: LINE_TYPES[n - 1].id });
       } else if (n === 0) {
         app.fitAll();
       }

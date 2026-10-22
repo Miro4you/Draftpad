@@ -1,4 +1,5 @@
 import type { App } from '../app';
+import { drawingScale, worldWidth } from '../core/scale';
 import { endPoints, geomBox, insideHatch, project } from '../core/curves';
 import { boxesIntersect, boxExpand, dist, emptyBox, boxAddPoint, simplifyFlat, type Box, type Vec } from '../core/geom';
 import { INK_WIDTHS, PENCIL_WIDTHS } from '../core/pens';
@@ -80,7 +81,7 @@ function rasterize(entities: Iterable<Entity>, f: Frame, gap: number): { barrier
   for (const ent of entities) {
     if (!isBoundary(ent) || !boxesIntersect(geomBox(ent), view)) continue;
     bounds.push(ent);
-    const lw = Math.max(ent.style.width + gap, minW);
+    const lw = Math.max(worldWidth(ent) + gap, minW);
     maxHalf = Math.max(maxHalf, lw / 2);
     ctx.lineWidth = lw;
     ctx.beginPath();
@@ -139,6 +140,7 @@ function vectorize(filled: Uint8Array, f: Frame, bounds: Entity[], gap: number, 
  * centres, traced and snapped onto the nearby lines.
  */
 export function findRegion(app: App, world: Vec, gap: number): RegionResult {
+  gap *= drawingScale();
   const cam = app.cam;
   const k = Math.min(1, MAX_RASTER / Math.max(app.width, app.height, 1));
   const [a, b, c, d, e, g] = cam.matrix();
@@ -164,6 +166,7 @@ export function findRegion(app: App, world: Vec, gap: number): RegionResult {
  * nearest first.
  */
 export function openSpots(app: App, world: Vec, gap: number, max = 6): Vec[] {
+  gap *= drawingScale();
   const cam = app.cam;
   const k = Math.min(1, MAX_RASTER / Math.max(app.width, app.height, 1));
   const [a, b, c, d, e, g] = cam.matrix();
@@ -183,7 +186,7 @@ export function openSpots(app: App, world: Vec, gap: number, max = 6): Vec[] {
   const loose: { p: Vec; ent: Entity }[] = [];
   for (const ent of r.bounds) {
     for (const p of endPoints(ent)) {
-      const tol = gap / 2 + ent.style.width / 2 + 0.05;
+      const tol = gap / 2 + worldWidth(ent) / 2 + 0.05;
       const touching = r.bounds.some((o) => {
         if (o === ent) {
           // Its own other end (a freehand stroke closed on itself).
@@ -191,7 +194,7 @@ export function openSpots(app: App, world: Vec, gap: number, max = 6): Vec[] {
           const other = dist(ends[0], p) < 1e-9 ? ends[1] : ends[0];
           return dist(other, p) <= tol;
         }
-        return project(o, p).d <= tol + o.style.width / 2;
+        return project(o, p).d <= tol + worldWidth(o) / 2;
       });
       if (touching) continue;
       // Next to the free space of the tapped area?
@@ -235,6 +238,7 @@ function loopsBox(loops: number[][]): Box {
  * area is now open (or nothing is left), so the hatch stays as it was.
  */
 export function refitHatch(entities: () => Iterable<Entity>, hatch: HatchEntity, gap: number): number[][] | null {
+  gap *= drawingScale();
   const ob = loopsBox(hatch.loops);
   const size = Math.max(ob.maxX - ob.minX, ob.maxY - ob.minY);
   for (const margin of [Math.max(10, size * 0.3), Math.max(30, size * 1.2)]) {

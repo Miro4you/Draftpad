@@ -1,3 +1,4 @@
+import { worldWidth } from '../core/scale';
 import type { Camera } from '../core/camera';
 import { boxesIntersect, boxExpand, type Box } from '../core/geom';
 import { entityBox, type SketchDocument } from '../core/document';
@@ -40,7 +41,7 @@ export class SceneRenderer {
       if (!layer.visible) continue;
       const alpha = layer.dimmed ? DIMMED_ALPHA : 1;
       for (const e of byLayer.get(layer.id) ?? []) {
-        if (!boxesIntersect(boxExpand(entityBox(e), e.style.width + margin), view)) continue;
+        if (!boxesIntersect(boxExpand(entityBox(e), worldWidth(e) + margin), view)) continue;
         this.painter.draw(e, alpha);
       }
     }

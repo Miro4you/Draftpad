@@ -225,5 +225,7 @@ export interface DocFile {
   activeLayerId: string;
   entities: Entity[];
   nextZ: number;
+  /** Drawing scale (world mm per paper mm); missing in files from before it existed. */
+  scale?: number;
   view?: ViewState;
 }

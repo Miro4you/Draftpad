@@ -20,7 +20,7 @@ interface PalettePrefs {
   collapsed: boolean;
 }
 
-/** Index 0–8 across both pen sets (keyboard 1–9). */
+/** Index 0–8 across both pen sets (keyboard Shift + 1–9). */
 export const ALL_PENS: { pen: PenKind; width: number }[] = [
   ...PENCIL_WIDTHS.map((width) => ({ pen: 'pencil' as const, width })),
   ...INK_WIDTHS.map((width) => ({ pen: 'ink' as const, width })),
@@ -369,7 +369,7 @@ export class Palette {
     this.groups = [shapes, hatch, annos, erasers, specials];
 
     // Pens.
-    this.penBtn = h('button', { class: 'chip pen-trigger', title: 'Stift wählen (1–9)', 'aria-label': 'Stift' });
+    this.penBtn = h('button', { class: 'chip pen-trigger', title: 'Stift wählen (⇧1–9)', 'aria-label': 'Stift' });
     const pencils = h('div', { class: 'pen-row' }, [h('span', { class: 'row-label', text: 'Bleistift' })]);
     const inks = h('div', { class: 'pen-row' }, [h('span', { class: 'row-label', text: 'Tusche' })]);
     const hardRow = h('div', { class: 'pen-row' }, [h('span', { class: 'row-label', text: 'Härte' })]);
@@ -383,7 +383,7 @@ export class Palette {
     hardRow.append(hardSeg);
     const penFly: Flyout = new Flyout([pencils, hardRow, inks], side, 'fly-pens');
     ALL_PENS.forEach((p, i) => {
-      const title = `${PEN_NAMES[p.pen]} ${formatWidth(p.width)} mm (${i + 1})`;
+      const title = `${PEN_NAMES[p.pen]} ${formatWidth(p.width)} mm (⇧${i + 1})`;
       const b = item(title, '', () => this.selectPen(i), () => penFly, `chip ${p.pen}`);
       b.append(this.penDot(p.pen, p.width), h('span', { class: 'cap', text: formatWidth(p.width) }));
       this.penItems.push(b);
@@ -392,10 +392,10 @@ export class Palette {
     penFly.attach(this.penBtn, () => penFly.toggle(this.penBtn));
 
     // Line types.
-    this.lineBtn = btn('Linienart', '', 'btn lt');
+    this.lineBtn = btn('Linienart (1–4)', '', 'btn lt');
     const lineFly: Flyout = new Flyout(
       LINE_TYPES.map((lt) => {
-        const b = item(`${lt.name} – ${lt.use}`, lineTypeIcon(LINE_DASH[lt.id]), () => app.setStyle({ lineType: lt.id }), () => lineFly, 'btn lt');
+        const b = item(`${lt.name} – ${lt.use} (${LINE_TYPES.indexOf(lt) + 1})`, lineTypeIcon(LINE_DASH[lt.id]), () => app.setStyle({ lineType: lt.id }), () => lineFly, 'btn lt');
         this.lineItems.set(lt.id, b);
         return b;
       }),

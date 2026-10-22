@@ -23,3 +23,6 @@ Gesammelte Rückmeldungen vom iPad-Test und ihr Stand.
 | 16 | iPad: Tastatur klappt beim Zeichnen/Trimmen auf | ✓ abgesichert: Aufsetzen auf der Zeichenfläche nimmt Textfeldern den Fokus, Dialoge geben ihn beim Schließen frei – bitte beobachten |
 | 17 | Trimmen spiegeln | ✓ auch „Objekt löschen“; nur bei aktiver Spiegelung |
 | 18 | PC und iPad live an derselben Zeichnung | ✓ Online-Ablage → „Live“ (über den Pi-Server) |
+| 19 | Zeitraffer-Video der Entstehung | ✓ Menü → Zeitraffer-Video (MP4/WebM, Vorschau, Teilen) |
+| 20 | Am PC Linienarten mit 1, 2, 3 … statt Stiftbreiten | ✓ 1–4 = Linienart, ⇧1–9 = Stift |
+| 21 | Maßstab, der sich beim ersten Strich anpasst und dann einstellbar ist | ✓ Zeichnungsmaßstab oben rechts (Strichstärken, Maße, Texte, Schraffur skalieren) |

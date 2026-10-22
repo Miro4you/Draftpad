@@ -15,13 +15,13 @@ interface ExportPrefs {
 }
 
 const FORMATS: { id: ExportFormat; label: string; hint: string }[] = [
-  { id: 'pdf', label: 'PDF', hint: 'Vektor, Maßstab 1:1 – zum Drucken und Weitergeben' },
-  { id: 'svg', label: 'SVG', hint: 'Vektor, Maßstab 1:1 – für Grafik- und CAD-Programme' },
+  { id: 'pdf', label: 'PDF', hint: 'Vektor, im Zeichnungsmaßstab – zum Drucken und Weitergeben' },
+  { id: 'svg', label: 'SVG', hint: 'Vektor, im Zeichnungsmaßstab – für Grafik- und CAD-Programme' },
   { id: 'png', label: 'PNG', hint: 'Bild mit Bleistift-Struktur, optional transparent' },
   { id: 'jpeg', label: 'JPEG', hint: 'Bild mit Bleistift-Struktur, kleinere Datei' },
 ];
 
-function saveBlob(blob: Blob, name: string): void {
+export function saveBlob(blob: Blob, name: string): void {
   const a = h('a', { href: URL.createObjectURL(blob), download: name });
   document.body.append(a);
   a.click();
@@ -119,7 +119,7 @@ export function showExportDialog(app: App): void {
     if (!sz) size.textContent = 'Nichts zu exportieren.';
     else {
       const sh = targetOpts().sheet;
-      let text = `${mm(sz.w)} × ${mm(sz.h)} mm${sh ? ` · Maßstab ${scaleText(sh.scale)}` : ''}`;
+      let text = `${mm(sz.w)} × ${mm(sz.h)} mm · Maßstab ${scaleText(sh ? sh.scale : app.doc.scale)}`;
       if (raster) {
         const k = prefs.dpi / 25.4;
         let pw = sz.w * k;

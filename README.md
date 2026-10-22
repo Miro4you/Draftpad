@@ -42,7 +42,9 @@ Das vollständige Konzept und der Phasenplan stehen in [CONCEPT.md](CONCEPT.md).
   - Linie antippen und Maßlinie platzieren · Kreis antippen → Ø · Bogen antippen → R · zwei Linien antippen → Winkel (der Zeiger wählt den Quadranten)
   - Maßtext über die Auswahlleiste ändern (leer = gemessener Wert); Schraffur wird hinter Maßzahlen ausgespart
 - ISO-GPS: Bezugsdreieck mit Buchstabenrahmen (A, B, … automatisch fortlaufend) und Toleranzrahmen mit allen 14 Symbolen nach ISO 1101, Toleranzwert, Ø und bis zu drei Bezügen
-- Export (Menü → Exportieren, ⇧⌘E): PDF und SVG als Vektor im Maßstab 1:1, PNG und JPEG mit Bleistift-Struktur in 150/300/600 dpi, alles oder nur die Auswahl, PNG/SVG auch transparent
+- Zeichnungsmaßstab (oben rechts, z. B. „1:10“): Längen bleiben echte Millimeter, Strichstärken, Maßzahlen, Pfeile, Texte und Schraffurabstände werden wie auf dem Papier im Maßstab vergrößert. Solange die Zeichnung leer ist, folgt er dem Zoom (kursiv), der erste Strich legt ihn fest; danach frei wählbar (2:1 bis 1:100, rückgängig machbar, wird live mit synchronisiert). Ein Blatt übernimmt den Maßstab und umgekehrt
+- Zeitraffer-Video (Menü): die Zeichnung entsteht in der Reihenfolge, in der sie gezeichnet wurde – Linien und Kreise wachsen, Maße und Schraffuren blenden ein. Quer, hoch oder quadratisch, 10–60 s, Vorschau im Dialog, Aufnahme als MP4 (Safari/iPad, Chrome) oder WebM, speichern oder teilen
+- Export (Menü → Exportieren, ⇧⌘E): PDF und SVG als Vektor im Zeichnungsmaßstab, PNG und JPEG mit Bleistift-Struktur in 150/300/600 dpi, alles oder nur die Auswahl, PNG/SVG auch transparent
 
 **Phase 4**
 
@@ -93,8 +95,8 @@ In der Online-Ablage bei einer Zeichnung „Live“ wählen – auf jedem Gerät
 | H · D · P | Schraffur · Bemaßung · GPS-Symbol |
 | Q · U · W · N · I | Rechteck · Ecken verrunden · Text · Nachzeichnen · Normteil |
 | Entf · ⌘D · ⌘A · Pfeile | Auswahl löschen · duplizieren · alles wählen · verschieben |
-| 1–4 / 5–9 | Bleistift- / Tuschestärken |
-| ⇧1–⇧5 | Linienart |
+| 1–4 | Linienart (Voll, Strich, Strich-Punkt, Strich-Zweipunkt) |
+| ⇧1–⇧4 / ⇧5–⇧9 | Bleistift- / Tuschestärken |
 | S / A / G | Fang / Winkelmodus / Raster |
 | 0 / R | Alles zeigen / Ansicht gerade |
 | ⌘Z / ⇧⌘Z | Rückgängig / Wiederholen |

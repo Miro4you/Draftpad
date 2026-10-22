@@ -10,6 +10,7 @@ import {
   type Vec,
 } from './geom';
 import { insideAnnoText, layoutAnno, layoutSegments } from './annotations';
+import { scaleGeneration } from './scale';
 import { isAnnotation, type Annotation, type ArcEntity, type Entity } from './types';
 
 /** Outline segments of an annotation (hatch loops, dimension lines, frames, text boxes). */
@@ -142,9 +143,21 @@ function arcPoly(c: Vec, r: number, start: number, sweep: number, closed: boolea
 }
 
 const polyCache = new WeakMap<Entity, Poly>();
+/** Annotation outlines depend on the drawing scale. */
+const annoPolyCache = new WeakMap<Entity, { g: number; p: Poly }>();
 
 /** Flattened geometry of an entity (cached per immutable entity object). */
 export function geomPoly(e: Entity): Poly {
+  if (isAnnotation(e) && e.kind !== 'hatch') {
+    const g = scaleGeneration();
+    const hit = annoPolyCache.get(e);
+    if (hit && hit.g === g) return hit.p;
+    const raw: number[] = [];
+    for (const [a, b] of annoSegments(e)) raw.push(a.x, a.y, b.x, b.y);
+    const p = chordPoly(raw.length ? raw : [0, 0, 0, 0]);
+    annoPolyCache.set(e, { g, p });
+    return p;
+  }
   let p = polyCache.get(e);
   if (p) return p;
   switch (e.kind) {

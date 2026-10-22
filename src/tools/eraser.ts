@@ -1,3 +1,4 @@
+import { worldWidth } from '../core/scale';
 import type { App } from '../app';
 import { capsuleRanges, removeRanges } from '../core/curves';
 import { newId } from '../core/document';
@@ -59,7 +60,7 @@ export class EraserTool implements Tool {
     const minLen = this.app.cam.px(0.75);
     for (const e of [...doc.visibleEntities(false)]) {
       if (isAnnotation(e)) continue;
-      const ranges = capsuleRanges(e, p0, p1, R + e.style.width / 2);
+      const ranges = capsuleRanges(e, p0, p1, R + worldWidth(e) / 2);
       if (!ranges.length) continue;
       const rest = removeRanges(e, ranges, () => newId('E'), minLen);
       if (rest.length === 1 && rest[0] === e) continue;

@@ -379,6 +379,29 @@ button:focus-visible {
   color: var(--muted);
 }
 
+.viewbar .btn.scale {
+  position: relative;
+  min-width: 50px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.viewbar .btn.scale.auto {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.viewbar .btn.scale select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px; /* no zoom-on-focus in iOS Safari */
+}
+
 .viewbar .btn.wide {
   flex-direction: row;
   gap: 6px;
@@ -1194,6 +1217,42 @@ canvas.sym-canvas {
 .flyout .seg-btn {
   padding: 0 4px;
   white-space: nowrap;
+}
+
+dialog.timelapse-dlg {
+  width: min(560px, calc(100% - 32px));
+}
+
+.tl-stage {
+  display: grid;
+  place-items: center;
+  height: min(42dvh, 320px);
+  border-radius: 10px;
+  background: var(--hover);
+  overflow: hidden;
+}
+
+canvas.tl-canvas {
+  position: static;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  touch-action: auto;
+}
+
+progress.tl-progress {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin-top: 8px;
+  accent-color: var(--accent);
+}
+
+.tl-result {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 dialog.export-dlg {

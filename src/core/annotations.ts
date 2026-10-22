@@ -1,4 +1,5 @@
 import { dist, type Vec } from './geom';
+import { drawingScale, scaleGeneration } from './scale';
 import type { Annotation, DatumEntity, DimEntity, GpsSymbol, GtolEntity, LaidOut, SheetEntity, SheetFormat, TextEntity } from './types';
 
 /**
@@ -8,13 +9,32 @@ import type { Annotation, DatumEntity, DimEntity, GpsSymbol, GtolEntity, LaidOut
  */
 
 /** Text height (DIN 406: 3.5 mm) and derived sizes. */
-export const TEXT_H = 3.5;
-const ARROW_L = 2.5;
-const ARROW_HALF = 0.42;
-const EXT_OVER = 2;
-const TEXT_GAP = 0.9;
-const FRAME_H = 7;
-const CELL = 7;
+const BASE = { TEXT_H: 3.5, ARROW_L: 2.5, ARROW_HALF: 0.42, EXT_OVER: 2, TEXT_GAP: 0.9, FRAME_H: 7, CELL: 7, TEXT_RUN: 0.6 };
+// Paper sizes in world mm at the current drawing scale (set by useScale before laying out).
+let TEXT_H = BASE.TEXT_H;
+let ARROW_L = BASE.ARROW_L;
+let ARROW_HALF = BASE.ARROW_HALF;
+let EXT_OVER = BASE.EXT_OVER;
+let TEXT_GAP = BASE.TEXT_GAP;
+let FRAME_H = BASE.FRAME_H;
+let CELL = BASE.CELL;
+let TEXT_RUN = BASE.TEXT_RUN;
+/** Drawing scale the sizes above are set for. */
+let K = 1;
+
+function useScale(): void {
+  const k = drawingScale();
+  if (k === K) return;
+  K = k;
+  TEXT_H = BASE.TEXT_H * k;
+  ARROW_L = BASE.ARROW_L * k;
+  ARROW_HALF = BASE.ARROW_HALF * k;
+  EXT_OVER = BASE.EXT_OVER * k;
+  TEXT_GAP = BASE.TEXT_GAP * k;
+  FRAME_H = BASE.FRAME_H * k;
+  CELL = BASE.CELL * k;
+  TEXT_RUN = BASE.TEXT_RUN * k;
+}
 
 export interface AnnoText {
   p: Vec;
@@ -152,14 +172,13 @@ function angFrame(e: DimEntity) {
   return { v, p3, a1, a2, sweep, R: Math.max(e.off, 1) };
 }
 
-/** Gap between a dimension line extended under its figure and the figure's end. */
-const TEXT_RUN = 0.6;
 
 /**
  * Point on the dimension line (or arc) under the middle of the figure – where it
  * is grabbed to move the figure along the line and the line itself.
  */
 export function dimTextAnchor(e: DimEntity): Vec {
+  useScale();
   if (e.type === 'lin') {
     const f = linFrame(e);
     return add(f.m, f.along, e.tpos ?? 0);
@@ -181,12 +200,13 @@ export function dimTextAnchor(e: DimEntity): Vec {
  * `stepDeg` snaps the direction of diameters and radii.
  */
 export function dragDimText(e: DimEntity, q: Vec, stepDeg = 0): DimEntity {
+  useScale();
   if (e.type === 'lin') {
     const f = linFrame(e);
     const off = (q.x - e.p1.x) * f.n.x + (q.y - e.p1.y) * f.n.y;
     const tpos = (q.x - f.m.x) * f.along.x + (q.y - f.m.y) * f.along.y;
     // The middle is a natural resting place: the figure settles there within 1 mm.
-    return { ...e, off, tpos: Math.abs(tpos) < 1 ? undefined : tpos };
+    return { ...e, off, tpos: Math.abs(tpos) < K ? undefined : tpos };
   }
   if (e.type === 'dia' || e.type === 'rad') {
     const rad = dist(e.p1, e.p2);
@@ -220,7 +240,7 @@ function layoutDim(e: DimEntity): AnnoLayout {
       L.lines.push([p, add(d, n, side * EXT_OVER)]);
     }
     L.lines.push([d1, d2]);
-    const short = len <= 2 * ARROW_L + 0.5;
+    const short = len <= 2 * ARROW_L + 0.5 * K;
     if (!short) {
       L.fills.push(arrow(d1, { x: -along.x, y: -along.y }), arrow(d2, along));
     } else {
@@ -311,8 +331,8 @@ function layoutDatum(e: DatumEntity): AnnoLayout {
   const L: AnnoLayout = { lines: [], arcs: [], fills: [], texts: [] };
   const d = unit({ x: e.p.x - e.at.x, y: e.p.y - e.at.y });
   const n = perp(d);
-  const hTri = 2.6;
-  const halfBase = 1.6;
+  const hTri = 2.6 * K;
+  const halfBase = 1.6 * K;
   L.fills.push([add(e.at, n, halfBase), add(e.at, n, -halfBase), add(e.at, d, hTri)]);
   const half = FRAME_H / 2;
   // Leader from the triangle to the nearest point of the frame.
@@ -339,7 +359,8 @@ function clampToBoxEdge(q: Vec, c: Vec, box: { minX: number; maxX: number; minY:
 /** Width of the cells of a tolerance frame. */
 export function gtolCells(e: GtolEntity): number[] {
   const value = (e.dia ? 'Ø' : '') + e.value;
-  return [CELL, Math.max(10, textWidth(value) + 3), ...e.datums.map((d) => Math.max(CELL, textWidth(d) + 3))];
+  useScale();
+  return [CELL, Math.max(10 * K, textWidth(value) + 3 * K), ...e.datums.map((d) => Math.max(CELL, textWidth(d) + 3 * K))];
 }
 
 function layoutGtol(e: GtolEntity): AnnoLayout {
@@ -489,16 +510,20 @@ export const GPS_NEEDS_DATUM: Record<GpsSymbol, boolean> = {
 function arrowSmall(tip: Vec, dir: Vec): Vec[] {
   const d = unit(dir);
   const n = perp(d);
-  const base = add(tip, d, -1.1);
-  return [tip, add(base, n, 0.35), add(base, n, -0.35)];
+  const base = add(tip, d, -1.1 * K);
+  return [tip, add(base, n, 0.35 * K), add(base, n, -0.35 * K)];
 }
 
-const layoutCache = new WeakMap<Annotation, AnnoLayout>();
+const layoutCache = new WeakMap<Annotation, { g: number; l: AnnoLayout }>();
 
 /** Layout of a dimension, GPS symbol, text or sheet (hatches have none). */
 export function layoutAnno(e: LaidOut): AnnoLayout {
-  let l = layoutCache.get(e);
-  if (!l) {
+  const g = scaleGeneration();
+  const hit = layoutCache.get(e);
+  if (hit && hit.g === g) return hit.l;
+  useScale();
+  let l: AnnoLayout;
+  {
     switch (e.kind) {
       case 'dim':
         l = layoutDim(e);
@@ -516,7 +541,7 @@ export function layoutAnno(e: LaidOut): AnnoLayout {
         l = layoutSheet(e);
         break;
     }
-    layoutCache.set(e, l);
+    layoutCache.set(e, { g, l });
   }
   return l;
 }
@@ -528,13 +553,14 @@ export const LINE_SPACING = 1.6;
 
 function layoutText(e: TextEntity): AnnoLayout {
   const L: AnnoLayout = { lines: [], arcs: [], fills: [], texts: [] };
+  const size = e.size * K;
   const r = { x: Math.cos(e.angle), y: Math.sin(e.angle) };
   const below = { x: -r.y, y: r.x };
   e.text.split('\n').forEach((line, i) => {
     if (!line) return;
-    const w = textWidth(line, e.size);
-    const start = add(e.at, below, i * e.size * LINE_SPACING);
-    L.texts.push({ p: add(start, r, w / 2), angle: e.angle, text: line, size: e.size, baseline: 'bottom' });
+    const w = textWidth(line, size);
+    const start = add(e.at, below, i * size * LINE_SPACING);
+    L.texts.push({ p: add(start, r, w / 2), angle: e.angle, text: line, size, baseline: 'bottom' });
   });
   return L;
 }

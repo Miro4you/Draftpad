@@ -1,5 +1,6 @@
 import { SHEET_FORMATS } from './annotations';
 import { geomBox } from './curves';
+import { drawingScale, scaleGeneration, setDrawingScale } from './scale';
 import type { Box } from './geom';
 import type { DocFile, Entity, Layer, ViewState } from './types';
 
@@ -7,13 +8,18 @@ export type Change =
   | { t: 'add'; e: Entity }
   | { t: 'del'; e: Entity }
   | { t: 'upd'; before: Entity; after: Entity }
-  | { t: 'layers'; before: Layer[]; after: Layer[]; activeBefore: string; activeAfter: string };
+  | { t: 'layers'; before: Layer[]; after: Layer[]; activeBefore: string; activeAfter: string }
+  | { t: 'scale'; before: number; after: number };
 
 /**
  * A change in a form other devices can apply (live editing): entities are put or
  * deleted as a whole, layers sent as the full list. Applying one twice is harmless.
  */
-export type SyncOp = { t: 'put'; e: Entity } | { t: 'del'; id: string } | { t: 'layers'; layers: Layer[] };
+export type SyncOp =
+  | { t: 'put'; e: Entity }
+  | { t: 'del'; id: string }
+  | { t: 'layers'; layers: Layer[] }
+  | { t: 'scale'; scale: number };
 
 /** The sync ops of changes (or of undoing them). */
 export function toSyncOps(changes: readonly Change[], inverse = false): SyncOp[] {
@@ -28,6 +34,8 @@ export function toSyncOps(changes: readonly Change[], inverse = false): SyncOp[]
         return { t: 'put', e: inverse ? c.before : c.after };
       case 'layers':
         return { t: 'layers', layers: inverse ? c.before : c.after };
+      case 'scale':
+        return { t: 'scale', scale: inverse ? c.before : c.after };
     }
   });
 }
@@ -39,11 +47,12 @@ export function newId(prefix: string): string {
 }
 
 const MAX_HISTORY = 300;
-const bboxCache = new WeakMap<Entity, Box>();
+const bboxCache = new WeakMap<Entity, { g: number; box: Box }>();
 
 /** How far centre lines reach beyond a circle of radius r (mm). */
 export function markExtent(r: number): number {
-  return Math.min(4, Math.max(2, r * 0.25));
+  const k = drawingScale();
+  return Math.min(4 * k, Math.max(2 * k, r * 0.25));
 }
 
 /**
@@ -51,9 +60,10 @@ export function markExtent(r: number): number {
  * without line width). Cached per immutable entity object.
  */
 export function entityBox(e: Entity): Box {
-  let bx = bboxCache.get(e);
-  if (bx) return bx;
-  bx = { ...geomBox(e) };
+  const g = scaleGeneration();
+  const hit = bboxCache.get(e);
+  if (hit && hit.g === g) return hit.box;
+  let bx = { ...geomBox(e) };
   if ((e.kind === 'circle' || e.kind === 'arc') && e.mark) {
     const m = e.r + markExtent(e.r);
     bx = {
@@ -63,7 +73,7 @@ export function entityBox(e: Entity): Box {
       maxY: Math.max(bx.maxY, e.c.y + m),
     };
   }
-  bboxCache.set(e, bx);
+  bboxCache.set(e, { g, box: bx });
   return bx;
 }
 
@@ -76,6 +86,11 @@ export class SketchDocument {
   activeLayerId = '';
   /** Bumped on every change; renderers and autosave compare against it. */
   version = 0;
+  /**
+   * Drawing scale (world mm per paper mm), 0 while not chosen yet: the first stroke
+   * then picks it from the zoom. Pen widths, texts and arrows are paper sizes.
+   */
+  private scaleValue = 0;
 
   private entities = new Map<string, Entity>();
   private nextZ = 1;
@@ -97,6 +112,7 @@ export class SketchDocument {
     this.layers = [sketch, clean];
     this.activeLayerId = sketch.id;
     this.entities.clear();
+    this.setScaleRaw(0);
     this.nextZ = 1;
     this.undoStack = [];
     this.redoStack = [];
@@ -125,6 +141,8 @@ export class SketchDocument {
         if (op.e.z >= this.nextZ) this.nextZ = op.e.z + 1;
       } else if (op.t === 'del') {
         this.entities.delete(op.id);
+      } else if (op.t === 'scale') {
+        if (op.scale > 0) this.setScaleRaw(op.scale);
       } else if (op.layers.length) {
         const flags = new Map(this.layers.map((l) => [l.id, l]));
         this.layers = op.layers.map((l) => {
@@ -273,6 +291,30 @@ export class SketchDocument {
     this.touch();
   }
 
+  /** The drawing scale (1 until one is chosen). */
+  get scale(): number {
+    return this.scaleValue || 1;
+  }
+
+  /** Whether the scale was chosen (by the user or the first stroke). */
+  get scaleSet(): boolean {
+    return this.scaleValue > 0;
+  }
+
+  /** Set the drawing scale as an undoable step. */
+  setScale(v: number): void {
+    if (!(v > 0) || v === this.scaleValue) return;
+    const c: Change = { t: 'scale', before: this.scaleValue, after: v };
+    this.setScaleRaw(v);
+    this.record(c);
+    this.touch();
+  }
+
+  private setScaleRaw(v: number): void {
+    this.scaleValue = v;
+    setDrawingScale(v || 1);
+  }
+
   setLayers(layers: Layer[], activeLayerId = this.activeLayerId): void {
     const c: Change = {
       t: 'layers',
@@ -370,6 +412,9 @@ export class SketchDocument {
         if (!this.layer(this.activeLayerId)) this.activeLayerId = this.layers[0].id;
         break;
       }
+      case 'scale':
+        this.setScaleRaw(inverse ? c.before : c.after);
+        break;
     }
   }
 
@@ -407,6 +452,7 @@ export class SketchDocument {
       activeLayerId: this.activeLayerId,
       entities,
       nextZ: this.nextZ,
+      scale: this.scaleValue || undefined,
       view,
     };
   }
@@ -423,6 +469,8 @@ export class SketchDocument {
       maxZ = Math.max(maxZ, e.z);
     }
     this.nextZ = Math.max(f.nextZ || 0, maxZ + 1);
+    // Files from before the drawing scale were drawn at 1:1.
+    this.setScaleRaw(f.scale ?? (f.entities.length ? 1 : 0));
     this.undoStack = [];
     this.redoStack = [];
     this.pending = null;
@@ -484,6 +532,7 @@ export function validateFile(data: unknown): DocFile {
     activeLayerId: typeof f.activeLayerId === 'string' ? f.activeLayerId : layers[0].id,
     entities,
     nextZ: isNum(f.nextZ) ? f.nextZ : 1,
+    scale: isNum(f.scale) && f.scale > 0 ? f.scale : undefined,
     view: f.view && isNum(f.view.scale) && isNum(f.view.rot) && isNum(f.view.tx) && isNum(f.view.ty) ? f.view : undefined,
   };
 }

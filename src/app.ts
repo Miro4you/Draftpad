@@ -1,3 +1,4 @@
+import { drawingScale, formatScale, nearestScale, setDrawingScale, worldWidth } from './core/scale';
 import { Camera } from './core/camera';
 import { intersectSegment, project } from './core/curves';
 import { entityBox, newId, SketchDocument, type Change, type SyncOp } from './core/document';
@@ -207,7 +208,10 @@ export class App {
       part: new PartTool(this),
       text: new TextTool(this),
     };
-    this.doc.beforeCommit = (changes) => this.refitHatches(changes);
+    this.doc.beforeCommit = (changes) => {
+      this.autoScale(changes);
+      this.refitHatches(changes);
+    };
     // Gap tolerances that are no longer offered fall back to the smallest one.
     if (!(HATCH_GAPS as readonly number[]).includes(this.settings.hatchGap)) this.settings.hatchGap = HATCH_GAPS[0];
     const savedTool = loadPref<{ id: ToolId }>('tool', { id: 'line' }).id;
@@ -426,11 +430,11 @@ export class App {
     let best: { e: Entity; d: number; s: number } | null = null;
     for (const e of this.doc.visibleEntities(!editable)) {
       const bx = entityBox(e);
-      const m = r + e.style.width / 2;
+      const m = r + worldWidth(e) / 2;
       if (world.x < bx.minX - m || world.x > bx.maxX + m || world.y < bx.minY - m || world.y > bx.maxY + m) continue;
       const pr = project(e, world);
       // Inside a hatch counts as a weak hit so lines within it still win.
-      const d = e.kind === 'hatch' ? Math.max(r * 0.9, pr.d) : Math.max(0, pr.d - e.style.width / 2);
+      const d = e.kind === 'hatch' ? Math.max(r * 0.9, pr.d) : Math.max(0, pr.d - worldWidth(e) / 2);
       // Later (upper) entities win ties.
       if (d <= r && (!best || d <= best.d)) best = { e, d, s: pr.s };
     }
@@ -462,6 +466,33 @@ export class App {
   mirrorCopies<T extends Entity>(e: T, preview = false): T[] {
     return this.mirrors().map((m, i) => transformEntity(e, m, preview ? `${e.id}~${i}` : newId('M')));
   }
+
+  /** The scale the zoom suggests (1:1 at 100 %). */
+  zoomScale(): number {
+    return nearestScale(MM_PX / this.cam.scale);
+  }
+
+  /** The first stroke on an empty drawing fixes the scale from the zoom (same undo step). */
+  private autoScale(changes: readonly Change[]): void {
+    if (this.doc.scaleSet) return;
+    const added = new Set(changes.flatMap((c) => (c.t === 'add' ? [c.e.id] : [])));
+    if (!added.size || this.doc.size === 0) return;
+    for (const e of this.doc.all()) if (!added.has(e.id)) return;
+    this.doc.setScale(drawingScale());
+  }
+
+  /** Set the drawing scale; a sheet in the drawing follows it. */
+  setScale(v: number): void {
+    if (v === this.doc.scale && this.doc.scaleSet) return;
+    this.doc.begin();
+    this.doc.setScale(v);
+    this.onScaleChange?.(v);
+    this.doc.commit();
+    this.toast(`Maßstab ${formatScale(v)}`);
+  }
+
+  /** Hook for the sheet to follow the drawing scale (set by the sheet module). */
+  onScaleChange: ((v: number) => void) | null = null;
 
   /**
    * Hatches follow their outlines: after a step that changed boundary lines near a
@@ -642,7 +673,7 @@ export class App {
 
   /** Length rounded to the length step (unless free: step off, Shift or snapping suspended). */
   stepValue(len: number): number {
-    const step = this.settings.lengthStep;
+    const step = this.settings.lengthStep * this.doc.scale;
     if (step <= 0 || this.lengthFree || this.snapSuspended) return len;
     return Math.max(step, Math.round(len / step) * step);
   }
@@ -807,6 +838,16 @@ export class App {
   }
 
   private frame(): void {
+    // Until the scale is chosen, it follows the zoom (so the first stroke looks as it will).
+    if (!this.doc.scaleSet) {
+      const k = this.zoomScale();
+      if (k !== drawingScale()) {
+        setDrawingScale(k);
+        this.sceneDirty = true;
+        this.overlayDirty = true;
+        this.viewDirty = true;
+      }
+    }
     if (this.viewDirty) {
       this.viewDirty = false;
       for (const fn of this.viewListeners) fn();

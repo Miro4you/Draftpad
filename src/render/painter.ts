@@ -8,6 +8,7 @@ import { drawAnno, drawHatch } from './annotations';
 import { grain } from './grain';
 import { hashString, traceEntity } from './paths';
 import { roughAmpAtScale, roughAmplitude, traceRough } from './rough';
+import { worldWidth } from '../core/scale';
 
 interface RoughCache {
   key: string;
@@ -91,7 +92,7 @@ export class Painter {
     if (isAnnotation(e)) {
       const color = penColor(e.style);
       const a = alpha * (e.style.pen === 'pencil' ? PENCIL_ALPHA : 1);
-      const w = this.effectiveWidth(e.style.width);
+      const w = this.effectiveWidth(worldWidth(e));
       if (e.kind === 'hatch') drawHatch(this.ctx, e, color, w, a);
       else drawAnno(this.ctx, e, color, w, a);
       return;
@@ -102,7 +103,7 @@ export class Painter {
       if (!marks) markCache.set(e, (marks = centerMarks(e)));
       for (const l of marks) {
         // Centre the pattern so the long dashes cross exactly at the centre.
-        const w = this.effectiveWidth(l.style.width);
+        const w = this.effectiveWidth(worldWidth(l));
         const dash = dashArray(l.style.lineType, w);
         const period = dash.reduce((s, v) => s + v, 0);
         const half = Math.hypot(l.b.x - l.a.x, l.b.y - l.a.y) / 2;
@@ -116,13 +117,14 @@ export class Painter {
     const ctx = this.ctx;
     const s = e.style;
     const color = penColor(s);
-    const w = this.effectiveWidth(s.width);
+    const ww = worldWidth(e);
+    const w = this.effectiveWidth(ww);
     const dash = dashArray(s.lineType, w);
 
     if (s.pen === 'pencil') {
       ctx.globalAlpha = alpha * PENCIL_ALPHA;
       const paint = this.pencilPattern(color) ?? color;
-      const amp = roughAmpAtScale(s.width, this.scale);
+      const amp = roughAmpAtScale(ww, this.scale);
       if (amp > 0) {
         // Up close: ragged graphite edge, filled as one outline.
         ctx.fillStyle = paint;
@@ -154,7 +156,7 @@ export class Painter {
   private roughPath(e: Entity, w: number, dash: number[], dashOffset: number, amp: number): Path2D {
     const level = Math.round(Math.log2(1 / this.scale));
     const px = Math.pow(2, -level);
-    const ampQ = Math.round((amp / roughAmplitude(e.style.width)) * 8) / 8;
+    const ampQ = Math.round((amp / roughAmplitude(worldWidth(e))) * 8) / 8;
     const key = `${level}|${ampQ}|${w.toFixed(4)}|${dashOffset.toFixed(4)}`;
     const v = this.view;
     const c = roughCache.get(e);
@@ -169,7 +171,7 @@ export class Painter {
       width: w,
       dash,
       dashOffset,
-      amp: ampQ * roughAmplitude(e.style.width),
+      amp: ampQ * roughAmplitude(worldWidth(e)),
       pxPerMm: px,
       view: box,
       seed: hashString(e.id),
@@ -183,7 +185,7 @@ export class Painter {
     const ctx = this.ctx;
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = color;
-    ctx.lineWidth = this.effectiveWidth(e.style.width) + extraPx / this.scale;
+    ctx.lineWidth = this.effectiveWidth(worldWidth(e)) + extraPx / this.scale;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.setLineDash([]);

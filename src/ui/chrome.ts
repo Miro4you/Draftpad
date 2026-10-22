@@ -1,5 +1,6 @@
 import { MM_PX, type App } from '../app';
 import { newId } from '../core/document';
+import { drawingScale, formatScale, SCALES } from '../core/scale';
 import type { Layer } from '../core/types';
 import { ask, askText } from './dialogs';
 import { h } from './dom';
@@ -32,6 +33,9 @@ export class ViewBar {
   private layerBtn: HTMLButtonElement;
   private layerName: HTMLElement;
   private liveBtn: HTMLButtonElement;
+  private scaleBtn: HTMLElement;
+  private scaleText: HTMLElement;
+  private scaleSel: HTMLSelectElement;
 
   constructor(
     private app: App,
@@ -43,6 +47,15 @@ export class ViewBar {
     this.compass.addEventListener('click', () => app.resetRotation());
     this.zoom = h('button', { class: 'btn zoom', title: 'Alles zeigen (0)' });
     this.zoom.addEventListener('click', () => app.fitAll());
+    // Drawing scale: a native picker over the button (wheel on the iPad).
+    this.scaleText = h('span');
+    this.scaleSel = h('select', { 'aria-label': 'Zeichnungsmaßstab' }) as HTMLSelectElement;
+    for (const v of SCALES) this.scaleSel.append(h('option', { value: String(v), text: formatScale(v) }));
+    this.scaleSel.addEventListener('change', () => {
+      app.setScale(Number(this.scaleSel.value));
+      this.scaleSel.blur();
+    });
+    this.scaleBtn = h('label', { class: 'btn scale' }, [this.scaleText, this.scaleSel]);
     this.layerName = h('span', { class: 'layer-name' });
     this.layerBtn = h('button', { class: 'btn wide', title: 'Ebenen', html: icons.layers });
     this.layerBtn.append(this.layerName);
@@ -58,7 +71,7 @@ export class ViewBar {
     });
     this.liveBtn = h('button', { class: 'btn wide live-badge', title: 'Live-Bearbeitung (Online-Ablage)' });
     this.liveBtn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('app:cloud')));
-    this.el = h('div', { class: 'viewbar panel' }, [this.liveBtn, this.compass, this.zoom, this.layerBtn, menuBtn]);
+    this.el = h('div', { class: 'viewbar panel' }, [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, menuBtn]);
     app.live?.onChange(() => this.update());
     app.onUiChange(() => this.update());
     app.onViewChange(() => this.update());
@@ -74,6 +87,14 @@ export class ViewBar {
       this.compass.innerHTML = icons.compass(deg);
     }
     setText(this.zoom, `${Math.round((this.app.cam.scale / MM_PX) * 100)} %`);
+    const k = drawingScale();
+    const auto = !this.app.doc.scaleSet;
+    setText(this.scaleText, formatScale(k));
+    this.scaleBtn.classList.toggle('auto', auto);
+    this.scaleBtn.title = auto
+      ? 'Maßstab – folgt noch dem Zoom, der erste Strich legt ihn fest'
+      : 'Zeichnungsmaßstab: Strichstärken, Maßzahlen, Pfeile und Texte wie auf dem Papier';
+    if (this.scaleSel.value !== String(k)) this.scaleSel.value = String(k);
     setText(this.layerName, this.app.doc.activeLayer.name);
     this.layerBtn.classList.toggle('active', this.layersPanel.isOpen);
     const live = this.app.live;
@@ -235,7 +256,7 @@ export class Menu {
 
   constructor(
     private app: App,
-    actions: { newDrawing: () => void; open: () => void; download: () => void; exportFile: () => void; sheet: () => void; cloud: () => void; help: () => void },
+    actions: { newDrawing: () => void; open: () => void; download: () => void; exportFile: () => void; timelapse: () => void; sheet: () => void; cloud: () => void; help: () => void },
   ) {
     const item = (label: string, fn: () => void, hint = '') => {
       const b = h('button', { class: 'menu-item', role: 'menuitem' }, [h('span', { text: label }), h('kbd', { text: hint })]);
@@ -268,6 +289,7 @@ export class Menu {
       item('Datei öffnen …', actions.open, '⌘O'),
       item('Datei herunterladen', actions.download, '⌘S'),
       item('Exportieren (PDF, SVG, PNG, JPEG) …', actions.exportFile, '⇧⌘E'),
+      item('Zeitraffer-Video …', actions.timelapse),
       item('Online-Ablage …', actions.cloud),
       item('Blatt & Schriftfeld …', actions.sheet),
       h('div', { class: 'menu-sep' }),
@@ -339,8 +361,8 @@ export function helpDialog(): HTMLDialogElement {
     ['Auswahl ziehen · Drehknopf', 'Verschieben mit Fang · Drehen'],
     ['Entf · ⌘D · ⌘A · Pfeile', 'Löschen · Duplizieren · Alles wählen · Verschieben 1 mm (⇧ 10 mm)'],
     ['Symmetrieachse', 'Linie auswählen → Achse; Knopf an der Achse schaltet Spiegeln'],
-    ['1–4 · 5–9', 'Bleistift 0,3–0,9 · Tusche 0,18–0,7'],
-    ['⇧1–⇧5', 'Linienart'],
+    ['1 · 2 · 3 · 4', 'Linienart: Voll · Strich · Strich-Punkt · Strich-Zweipunkt'],
+    ['⇧1–⇧4 · ⇧5–⇧9', 'Bleistift 0,3–0,9 · Tusche 0,18–0,7'],
     ['S · A · G', 'Fang · Winkelmodus · Raster'],
     ['0 · R', 'Alles zeigen · Ansicht gerade'],
     ['⌘Z · ⇧⌘Z', 'Rückgängig · Wiederholen'],

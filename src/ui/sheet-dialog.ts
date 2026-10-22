@@ -1,6 +1,7 @@
 import type { App } from '../app';
 import { paperSize, scaleText, SHEET_FORMATS, sheetBox } from '../core/annotations';
 import { newId } from '../core/document';
+import { drawingScale } from '../core/scale';
 import { INK_WIDTHS, PENCIL_WIDTHS } from '../core/pens';
 import type { Layer, SheetEntity, SheetFormat, TitleFields } from '../core/types';
 import { loadPref, savePref } from '../storage/idb';
@@ -14,8 +15,8 @@ export interface SheetSpec {
   fields: TitleFields;
 }
 
-/** Scales offered (world mm per paper mm). */
-const SCALES = [0.5, 1, 2, 5, 10];
+/** Scales offered (world mm per paper mm); the sheet scale is the drawing scale. */
+const SCALES = [0.5, 1, 2, 5, 10, 20, 50];
 
 const FIELD_LABELS: [keyof TitleFields, string][] = [
   ['title', 'Benennung'],
@@ -69,7 +70,8 @@ export function askSheet(initial: SheetSpec, title: string, confirm: string, onR
       () => spec.landscape,
       (v) => (spec.landscape = v),
     );
-    const scale = seg(SCALES.map((k) => ({ id: k, label: scaleText(k) })), () => spec.scale, (v) => (spec.scale = v));
+    const offered = SCALES.includes(spec.scale) ? SCALES : [...SCALES, spec.scale].sort((a, b) => a - b);
+    const scale = seg(offered.map((k) => ({ id: k, label: scaleText(k) })), () => spec.scale, (v) => (spec.scale = v));
     const grid = h('div', { class: 'sheet-fields' });
     for (const [key, label] of FIELD_LABELS) {
       const input = h('input', { class: 'dlg-input', type: 'text', autocomplete: 'off', 'data-key': key });
@@ -121,6 +123,20 @@ function sheetStyle(app: App, scale: number): SheetEntity['style'] {
   return { ...app.style, width: base * scale, lineType: 'solid', color: null };
 }
 
+/** The sheet at scale `scale`, kept centred where `old` was. */
+function resized(app: App, e: SheetEntity, old: SheetEntity, scale: number): SheetEntity {
+  const b = sheetBox(old);
+  const [w, hh] = paperSize(e.format, e.landscape);
+  const at = { x: (b.minX + b.maxX) / 2 - (w * scale) / 2, y: (b.minY + b.maxY) / 2 - (hh * scale) / 2 };
+  return { ...e, scale, at, style: sheetStyle(app, scale) };
+}
+
+/** The sheet follows a new drawing scale (call inside the step that sets it). */
+export function sheetFollowScale(app: App, scale: number): void {
+  const cur = findSheet(app);
+  if (cur && cur.scale !== scale) app.doc.update(resized(app, cur, cur, scale));
+}
+
 /** Insert a sheet on its own bottom layer, or edit the existing one. */
 export async function editSheet(app: App): Promise<void> {
   const cur = findSheet(app);
@@ -130,12 +146,13 @@ export async function editSheet(app: App): Promise<void> {
       app.toast('Blatt entfernt');
     });
     if (!spec) return;
-    // Keep the sheet centred where it was.
-    const b = sheetBox(cur);
-    const [w, hh] = paperSize(spec.format, spec.landscape);
-    const at = { x: (b.minX + b.maxX) / 2 - (w * spec.scale) / 2, y: (b.minY + b.maxY) / 2 - (hh * spec.scale) / 2 };
     const before = app.doc.get(cur.id);
-    if (before) app.doc.update({ ...cur, ...spec, at, style: sheetStyle(app, spec.scale) }, before);
+    if (before) {
+      app.doc.begin();
+      app.doc.update(resized(app, { ...cur, ...spec }, cur, spec.scale), before);
+      app.doc.setScale(spec.scale);
+      app.doc.commit();
+    }
     savePref('sheetFields', { drawnBy: spec.fields.drawnBy, company: spec.fields.company });
     return;
   }
@@ -143,7 +160,7 @@ export async function editSheet(app: App): Promise<void> {
   const initial: SheetSpec = {
     format: 'A4',
     landscape: true,
-    scale: 1,
+    scale: drawingScale(),
     fields: { title: '', number: '', material: '', drawnBy: remembered.drawnBy ?? '', date: today(), company: remembered.company ?? '' },
   };
   const spec = await askSheet(initial, 'Blatt einfügen', 'Einfügen');
@@ -170,6 +187,7 @@ export async function editSheet(app: App): Promise<void> {
     ...spec,
   };
   doc.add(e);
+  doc.setScale(spec.scale);
   doc.commit();
   app.fitBox(sheetBox(e));
 }

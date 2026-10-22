@@ -1,5 +1,6 @@
 import { layoutAnno, textWidth, type AnnoLayout, type AnnoText } from '../core/annotations';
 import { currentTheme, PAPER_COLORS } from '../core/pens';
+import { drawingScale } from '../core/scale';
 import type { HatchEntity, LaidOut } from '../core/types';
 
 /** Subset of the canvas API used for annotations (also implemented by the export recorder). */
@@ -170,7 +171,8 @@ export function drawHatch(ctx: DrawCtx, e: HatchEntity, color: string, width: nu
   ctx.fillStyle = color;
   ctx.lineWidth = width;
   ctx.lineCap = 'round';
-  const s = Math.max(e.spacing, 0.2);
+  const k = drawingScale();
+  const s = Math.max(e.spacing, 0.2) * k;
   const corners = [
     [minX, minY],
     [maxX, minY],
@@ -179,7 +181,7 @@ export function drawHatch(ctx: DrawCtx, e: HatchEntity, color: string, width: nu
   ];
   if (e.pattern === 'dots') {
     ctx.beginPath();
-    const r = Math.max(width * 0.9, 0.12);
+    const r = Math.max(width * 0.9, 0.12 * k);
     for (let y = Math.floor(minY / s) * s; y <= maxY; y += s) {
       const row = Math.round(y / s);
       for (let x = Math.floor(minX / s) * s + (row % 2 ? s / 2 : 0); x <= maxX + s; x += s) {
