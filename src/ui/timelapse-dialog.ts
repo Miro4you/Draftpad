@@ -39,6 +39,12 @@ function videoSize(shape: Shape, res: number): { w: number; h: number } {
   return shape === 'wide' ? { w: long, h: res } : shape === 'tall' ? { w: res, h: long } : { w: res, h: res };
 }
 const DURATIONS = [10, 20, 30, 60];
+/**
+ * The finished drawing opens the video (photo libraries show the first frame as
+ * its thumbnail), then fades to the empty paper (s).
+ */
+const POSTER = 0.7;
+const FADE = 0.4;
 /** Empty paper before the first line and the finished drawing at the end (s). */
 const LEAD = 0.5;
 const HOLD = 2;
@@ -164,6 +170,8 @@ export function showTimelapseDialog(app: App): void {
   actions.append(close, preview, record);
 
   let renderer: TimelapseRenderer;
+  /** The finished drawing (first frames of the video). */
+  const poster = document.createElement('canvas');
   let raf = 0;
   let busy = false;
   let recorder: MediaRecorder | null = null;
@@ -174,6 +182,9 @@ export function showTimelapseDialog(app: App): void {
     canvas.height = s.h;
     renderer = new TimelapseRenderer(planFor(mode), canvas, areaBox());
     renderer.frame(1);
+    poster.width = s.w;
+    poster.height = s.h;
+    poster.getContext('2d')?.drawImage(canvas, 0, 0);
   }
 
   function sync(): void {
@@ -203,11 +214,20 @@ export function showTimelapseDialog(app: App): void {
     busy = true;
     renderer.reset();
     const dur = prefs.seconds;
-    const total = LEAD + dur + HOLD;
+    const intro = POSTER + FADE;
+    const total = intro + LEAD + dur + HOLD;
     const start = performance.now();
+    const ctx = canvas.getContext('2d')!;
     const step = () => {
       const el = (performance.now() - start) / 1000;
-      renderer.frame(Math.min(1, Math.max(0, (el - LEAD) / dur)));
+      renderer.frame(Math.min(1, Math.max(0, (el - intro - LEAD) / dur)));
+      if (el < intro) {
+        // Finished drawing first, then fading to the empty paper.
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = el < POSTER ? 1 : 1 - (el - POSTER) / FADE;
+        ctx.drawImage(poster, 0, 0);
+        ctx.globalAlpha = 1;
+      }
       bar.value = Math.min(1, el / total);
       if (recorder) status.textContent = `Aufnahme läuft … ${Math.min(Math.ceil(el), Math.ceil(total))} / ${Math.ceil(total)} s`;
       if (el < total) raf = requestAnimationFrame(step);

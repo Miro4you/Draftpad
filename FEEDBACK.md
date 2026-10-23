@@ -36,3 +36,4 @@ Gesammelte Rückmeldungen vom iPad-Test und ihr Stand.
 | 29 | Momentpfeil (gebogen um einen Punkt, z. B. M = 20 Nm) | offen – gesammelt |
 | 30 | Streckenlast (Pfeilreihe entlang einer Linie, z. B. q = 2 kN/m) | offen – gesammelt |
 | 31 | Lagersymbole: Festlager, Loslager, Einspannung (Freikörperbild) | offen – gesammelt |
+| 32 | Video: erster Frame = Endergebnis (sonst weiße Vorschaubilder) | ✓ 0,7 s Ergebnis, dann Überblendung zum leeren Blatt |
