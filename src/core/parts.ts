@@ -28,7 +28,12 @@ export interface PartSpec {
   view: PartView;
   /** Screw length, hole depth or thread depth (mm). */
   length: number;
+  /** Insertion angle in degrees (counter-clockwise on the paper); null/missing = free (drag to turn). */
+  angle?: number | null;
 }
+
+/** Insertion angles offered for parts (null = free). */
+export const PART_ANGLES: (number | null)[] = [0, 45, 90, 135, 180, null];
 
 // ---- tables ------------------------------------------------------------------------------
 

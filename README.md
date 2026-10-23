@@ -36,7 +36,7 @@ Das vollständige Konzept und der Phasenplan stehen in [CONCEPT.md](CONCEPT.md).
 
 **Phase 3**
 
-- Schraffur: in eine geschlossene Fläche tippen; Lücken bis 0,5 oder 1 mm werden überbrückt; die Schraffur passt sich an, wenn danach Linien dazukommen oder sich ändern (neue Bohrungen werden ausgespart); ist die Fläche offen, werden die offenen Stellen kurz rot markiert, Inseln (z. B. Bohrungen) bleiben frei; Muster 45°, −45°, Kreuz, Doppellinie (Stahl), voll/gestrichelt (Kunststoff), Punkte; Abstand 1–5 mm. Antippen einer vorhandenen Schraffur übernimmt Muster und Abstand
+- Schraffur: in eine geschlossene Fläche tippen; Lücken bis 0,5 oder 1 mm werden überbrückt; die Schraffur passt sich an, wenn danach Linien dazukommen oder sich ändern (neue Bohrungen werden ausgespart); ist die Fläche offen, werden die offenen Stellen kurz rot markiert, Inseln (z. B. Bohrungen) bleiben frei; Muster 45°, −45°, Kreuz, Doppellinie (Stahl), voll/gestrichelt (Kunststoff), Punkte; Abstand 1–5 mm; die Schraffurlinien bekommen den gewählten Stift (für ISO einen dünnen wählen). Antippen einer vorhandenen Schraffur übernimmt Muster und Abstand
 - Bemaßung nach DIN 406: geschlossene Pfeile, Maßzahl über der Maßlinie, von unten oder rechts lesbar
   - Punkt zu Punkt ziehen, dann Maßlinie platzieren (waagerecht, senkrecht oder parallel – je nachdem, wohin man zieht)
   - Linie antippen und Maßlinie platzieren · Kreis antippen → Ø · Bogen antippen → R · zwei Linien antippen → Winkel (der Zeiger wählt den Quadranten)
@@ -71,7 +71,7 @@ Auswahl · Linie · Formen (Kreis, Rechteck, Bogen, Bogen um Mittelpunkt, Achsen
 
 **Normteile (Taste I, Gruppe Sonderwerkzeuge)**
 
-Durchgangsbohrung (ISO 273), Gewindebohrung, Zylinderschraube ISO 4762, Sechskantschraube ISO 4017, Sechskantmutter ISO 4032, Rillenkugellager DIN 625 (60xx/62xx), Nuten für Sicherungsringe DIN 471/472 – jeweils mit Größe, Ansicht (Seite/Schnitt oder Draufsicht) und Länge bzw. Tiefe. Das Teil folgt dem Stift und rastet an Mittelpunkten und Linien; Antippen setzt es, Drücken und Ziehen dreht es vorher. Eingefügt werden normale Linien, Kreise und Bögen. Die Maße stammen aus den üblichen Normtabellen – für kritische Maße bitte das Normblatt prüfen.
+Durchgangsbohrung (ISO 273), Gewindebohrung, Zylinderschraube ISO 4762, Sechskantschraube ISO 4017, Sechskantmutter ISO 4032, Rillenkugellager DIN 625 (60xx/62xx), Nuten für Sicherungsringe DIN 471/472 – jeweils mit Größe, Ansicht (Seite/Schnitt oder Draufsicht) und Länge bzw. Tiefe. Das Teil folgt dem Stift und rastet an Mittelpunkten und Linien; Einfügewinkel 0°, 45°, 90°, 135°, 180° oder frei (im Katalog und in den Werkzeug-Optionen, die Vorschau dreht mit); antippen setzt das Teil, bei „frei“ dreht Drücken und Ziehen es vorher. Eingefügt werden normale Linien, Kreise und Bögen. Die Maße stammen aus den üblichen Normtabellen – für kritische Maße bitte das Normblatt prüfen.
 
 **Live bearbeiten (PC und iPad gleichzeitig)**
 

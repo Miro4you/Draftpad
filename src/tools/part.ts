@@ -20,7 +20,7 @@ export class PartTool implements Tool {
   readonly id = 'part';
   private state: State = { k: 'idle' };
   private hoverAt: { p: Vec; hit: SnapHit | null } | null = null;
-  /** Direction of the part's axis (radians, world); null = along the screen. */
+  /** Direction of the part's axis when turned freely (radians, world); null = along the screen. */
   private angle: number | null = null;
 
   constructor(private app: App) {}
@@ -31,6 +31,17 @@ export class PartTool implements Tool {
 
   get hoverSnap(): boolean {
     return this.state.k === 'idle';
+  }
+
+  /** The insertion angle chosen in the catalogue (radians, world), null = free. */
+  private fixedAngle(): number | null {
+    const a = this.app.settings.part.angle;
+    return a === null || a === undefined ? null : (-a * Math.PI) / 180;
+  }
+
+  /** Angle a placement starts with. */
+  private startAngle(): number {
+    return this.fixedAngle() ?? this.angle ?? this.viewAngle();
   }
 
   private viewAngle(): number {
@@ -73,13 +84,15 @@ export class PartTool implements Tool {
     this.hoverAt = null;
     if (!this.app.ensureDrawableLayer()) return;
     const s = this.app.snapPoint(ev.world, ev.pointerType);
-    this.state = { k: 'press', start: ev.screen, at: s.p, hit: s.hit, angle: this.angle ?? this.viewAngle(), moved: false };
+    this.state = { k: 'press', start: ev.screen, at: s.p, hit: s.hit, angle: this.startAngle(), moved: false };
     this.app.requestOverlay();
   }
 
   move(ev: ToolEvent): void {
     const st = this.state;
     if (st.k !== 'press') return;
+    // A fixed angle from the catalogue isn't turned by dragging.
+    if (this.fixedAngle() !== null) return;
     if (!st.moved && dist(st.start, ev.screen) > DRAG_PX) st.moved = true;
     if (st.moved) {
       const q = this.app.resolveEnd(st.at, ev.world, ev.pointerType).p;
@@ -134,7 +147,7 @@ export class PartTool implements Tool {
         drawPill(ctx, { x: b.x, y: b.y - 22 }, `${deg.toFixed(deg % 1 ? 1 : 0).replace('.', ',')}°`);
       }
     } else if (this.hoverAt) {
-      for (const e of this.entities(this.hoverAt.p, this.angle ?? this.viewAngle(), true)) this.app.paintPreview(e, 0.45);
+      for (const e of this.entities(this.hoverAt.p, this.startAngle(), true)) this.app.paintPreview(e, 0.45);
     }
   }
 }

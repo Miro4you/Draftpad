@@ -26,3 +26,5 @@ Gesammelte Rückmeldungen vom iPad-Test und ihr Stand.
 | 19 | Zeitraffer-Video der Entstehung | ✓ Menü → Zeitraffer-Video (MP4/WebM, Vorschau, Teilen) |
 | 20 | Am PC Linienarten mit 1, 2, 3 … statt Stiftbreiten | ✓ 1–4 = Linienart, ⇧1–9 = Stift |
 | 21 | Maßstab, der sich beim ersten Strich anpasst und dann einstellbar ist | ✓ Zeichnungsmaßstab oben rechts (Strichstärken, Maße, Texte, Schraffur skalieren) |
+| 22 | Normteile: Einfügewinkel 0/45/90/135/180/frei, Vorschau dreht mit | ✓ Katalog + Werkzeug-Optionen |
+| 23 | Schraffur-Strichstärke folgt dem gewählten Stift | ✓ (vorher fest dünn); bestehende Schraffur: auswählen und Stift wählen |

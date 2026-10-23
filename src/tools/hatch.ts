@@ -2,7 +2,6 @@ import type { App } from '../app';
 import { drawingScale, worldWidth } from '../core/scale';
 import { endPoints, geomBox, insideHatch, project } from '../core/curves';
 import { boxesIntersect, boxExpand, dist, emptyBox, boxAddPoint, simplifyFlat, type Box, type Vec } from '../core/geom';
-import { INK_WIDTHS, PENCIL_WIDTHS } from '../core/pens';
 import { dilate, floodFill, labelComponents, traceLoops } from '../core/region';
 import { isAnnotation, type Entity, type HatchEntity } from '../core/types';
 import { traceEntity } from '../render/paths';
@@ -340,9 +339,9 @@ export class HatchTool implements Tool {
       if (r.reason === 'open') this.showSpots(openSpots(app, world, set.hatchGap));
       return false;
     }
-    const width = app.style.pen === 'pencil' ? PENCIL_WIDTHS[0] : INK_WIDTHS[1];
+    // Hatch lines in the current pen (choose a thin one for ISO hatching).
     const e = app.newEntity<HatchEntity>({ kind: 'hatch', loops: r.loops, pattern: set.hatchPattern, angle: 0, spacing: set.hatchSpacing, gap: set.hatchGap }, 'H');
-    app.addDrawn({ ...e, style: { ...e.style, width, lineType: 'solid' } });
+    app.addDrawn({ ...e, style: { ...e.style, lineType: 'solid' } });
     return true;
   }
 

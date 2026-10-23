@@ -1,4 +1,4 @@
-import { partGeometry, PARTS, partLabel, type PartKind, type PartSpec, type PartView } from '../core/parts';
+import { PART_ANGLES, partGeometry, PARTS, partLabel, type PartKind, type PartSpec, type PartView } from '../core/parts';
 import { baseDialog, finish } from './dialogs';
 import { h } from './dom';
 
@@ -16,11 +16,17 @@ function drawPreview(canvas: HTMLCanvasElement, spec: PartSpec): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, W, H);
   const prims = partGeometry(spec);
+  // Turned like it will be placed (y points down on the canvas, angles count counter-clockwise).
+  const a = ((spec.angle ?? 0) * Math.PI) / 180;
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  const add = (x: number, y: number) => {
+  const add = (px: number, py: number) => {
+    const x = ca * px + sa * py;
+    const y = -sa * px + ca * py;
     minX = Math.min(minX, x);
     maxX = Math.max(maxX, x);
     minY = Math.min(minY, y);
@@ -33,6 +39,7 @@ function drawPreview(canvas: HTMLCanvasElement, spec: PartSpec): void {
   const k = Math.min((W - 24) / (maxX - minX || 1), (H - 24) / (maxY - minY || 1));
   ctx.translate(W / 2 - ((minX + maxX) / 2) * k, H / 2 - ((minY + maxY) / 2) * k);
   ctx.scale(k, k);
+  ctx.rotate(-a);
   const color = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#222';
   ctx.strokeStyle = color;
   ctx.lineCap = 'round';
@@ -61,12 +68,13 @@ export function askPart(initial: PartSpec): Promise<PartSpec | null> {
     const kinds = h('div', { class: 'part-kinds' });
     const sizes = h('div', { class: 'seg seg-wrap' });
     const views = h('div', { class: 'seg' });
+    const angles = h('div', { class: 'seg' });
     const lengths = h('div', { class: 'seg seg-wrap' });
     const lenField = h('div', { class: 'exp-field' }, [h('span', { class: 'len-label' }), lengths]);
     const sizeField = h('div', { class: 'exp-field' }, [h('span', { class: 'size-label' }), sizes]);
     const canvas = h('canvas', { class: 'part-preview' });
     const label = h('p', { class: 'exp-hint part-label' });
-    body.append(kinds, sizeField, h('div', { class: 'exp-field' }, [h('span', { text: 'Ansicht' }), views]), lenField, canvas, label);
+    body.append(kinds, sizeField, h('div', { class: 'exp-field' }, [h('span', { text: 'Ansicht' }), views]), lenField, h('div', { class: 'exp-field' }, [h('span', { text: 'Einfügewinkel' }), angles]), canvas, label);
 
     const kindBtns = new Map<PartKind, HTMLButtonElement>();
     for (const k of Object.keys(PARTS) as PartKind[]) {
@@ -110,6 +118,9 @@ export function askPart(initial: PartSpec): Promise<PartSpec | null> {
         (lenField.querySelector('.len-label') as HTMLElement).textContent = `${info.length.label} (mm)`;
         segButtons(lengths, info.length.values.map((v) => ({ id: String(v), label: String(v) })), String(spec.length), (id) => (spec.length = Number(id)));
       }
+      segButtons(angles, PART_ANGLES.map((a) => ({ id: String(a), label: a === null ? 'frei' : `${a}°` })), String(spec.angle ?? null), (id) => {
+        spec.angle = id === 'null' ? null : Number(id);
+      });
       label.textContent = partLabel(spec);
       requestAnimationFrame(() => drawPreview(canvas, spec));
     }

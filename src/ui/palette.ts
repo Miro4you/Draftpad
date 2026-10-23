@@ -3,7 +3,7 @@ import { formatWidth, HARDNESSES, INK_WIDTHS, LINE_TYPES, PEN_NAMES, PENCIL_WIDT
 import type { Hardness, HatchPattern, LineType, PenKind } from '../core/types';
 import { HATCH_NAMES } from '../render/annotations';
 import { HATCH_GAPS } from '../tools/hatch';
-import { partLabel } from '../core/parts';
+import { PART_ANGLES, partLabel } from '../core/parts';
 import { askPart } from './part-dialog';
 import { loadPref, savePref } from '../storage/idb';
 import { icons, lineTypeIcon } from './icons';
@@ -227,6 +227,7 @@ export class Palette {
   private textSizeItems = new Map<number, HTMLButtonElement>();
   private hatchItems = new Map<string, HTMLButtonElement>();
   private partLabel!: HTMLElement;
+  private partAngleItems = new Map<number | null, HTMLButtonElement>();
   private penBtn: HTMLButtonElement;
   private lineBtn: HTMLButtonElement;
   private colorBtn: HTMLButtonElement;
@@ -349,11 +350,20 @@ export class Palette {
     this.partLabel = h('div', { class: 'part-current' });
     const partBtn = h('button', { class: 'dlg-btn', text: 'Anderes Teil …', 'data-item': '1' });
     partBtn.addEventListener('click', () => void choosePart(app));
+    const angleRow = h('div', { class: 'seg' });
+    for (const a of PART_ANGLES) {
+      const b = h('button', { class: 'seg-btn', text: a === null ? 'frei' : `${a}°`, title: a === null ? 'Frei: Drücken und Ziehen dreht das Teil' : `Einfügewinkel ${a}°`, 'data-item': '1' });
+      b.addEventListener('click', () => app.updateSettings({ part: { ...app.settings.part, angle: a } }));
+      this.partAngleItems.set(a, b);
+      angleRow.append(b);
+    }
     const partOpts = h('div', { class: 'fly-section' }, [
       h('div', { class: 'fly-title', text: 'Normteil' }),
       this.partLabel,
       partBtn,
-      h('div', { class: 'fly-hint', text: 'Antippen setzt das Teil, Drücken und Ziehen dreht es vorher in die Zugrichtung.' }),
+      h('div', { class: 'fly-title', text: 'Einfügewinkel' }),
+      angleRow,
+      h('div', { class: 'fly-hint', text: 'Antippen setzt das Teil; bei „frei“ dreht Drücken und Ziehen es vorher in die Zugrichtung.' }),
     ]);
     const specials = new ToolGroup(
       app,
@@ -522,6 +532,7 @@ export class Palette {
     for (const [sz, b] of this.textSizeItems) b.classList.toggle('active', sz === settings.textSize);
     for (const [r, b] of this.radiusItems) b.classList.toggle('active', r === settings.filletRadius);
     this.partLabel.textContent = partLabel(settings.part);
+    for (const [a, b] of this.partAngleItems) b.classList.toggle('active', a === (settings.part.angle ?? null));
     for (const [k, b] of this.hatchItems) {
       b.classList.toggle('active', k === `p:${settings.hatchPattern}` || k === `s:${settings.hatchSpacing}` || k === `g:${settings.hatchGap}`);
     }
