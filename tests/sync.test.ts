@@ -34,6 +34,9 @@ describe('live sync ops', () => {
     let echoed = 0;
     b.onOps(() => echoed++);
     b.patchLayerView(b.layers[1].id, { visible: false });
+    // Hiding a layer is sent along (for the journal), applying remote ops is not echoed.
+    expect(echoed).toBe(1);
+    echoed = 0;
     a.begin();
     a.add(line(a, 'x', 0));
     a.setLayers([...a.layers].reverse().map((l, i) => (i === 0 ? { ...l, name: 'Oben' } : l)));

@@ -218,6 +218,29 @@ export interface ViewState {
 }
 
 /** Serialised document (file format and autosave). */
+/**
+ * A change in a form other devices can apply (live editing): entities are put or
+ * deleted as a whole, layers sent as the full list. Applying one twice is harmless.
+ * `vis` records showing/hiding a layer (each device keeps its own view; it is
+ * only kept in the journal).
+ */
+export type SyncOp =
+  | { t: 'put'; e: Entity }
+  | { t: 'del'; id: string }
+  | { t: 'layers'; layers: Layer[] }
+  | { t: 'scale'; scale: number }
+  | { t: 'vis'; id: string; visible: boolean; dimmed: boolean };
+
+/**
+ * One step of the drawing's history (for the timelapse): what changed and when.
+ * A `base` entry stands for everything drawn before the history was kept.
+ */
+export interface JournalEntry {
+  t: number;
+  ops: SyncOp[];
+  base?: true;
+}
+
 export interface DocFile {
   format: 'skizzen-cad';
   version: 1;
@@ -227,5 +250,7 @@ export interface DocFile {
   nextZ: number;
   /** Drawing scale (world mm per paper mm); missing in files from before it existed. */
   scale?: number;
+  /** How the drawing came about, step by step (missing in older files). */
+  journal?: JournalEntry[];
   view?: ViewState;
 }

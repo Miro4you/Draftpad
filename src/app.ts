@@ -972,7 +972,7 @@ export class App {
     this.doc.loadFile(data);
     for (const l of this.doc.layers) {
       const f = flags.get(l.id);
-      if (f) this.doc.patchLayerView(l.id, { visible: f.visible, locked: f.locked, dimmed: f.dimmed });
+      if (f) this.doc.patchLayerView(l.id, { visible: f.visible, locked: f.locked, dimmed: f.dimmed }, false);
     }
     if (this.doc.layer(active)) this.doc.setActiveLayer(active);
     this.cam.state = view;

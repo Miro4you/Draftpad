@@ -1,5 +1,5 @@
 import type { App } from '../app';
-import { planTimelapse, TimelapseRenderer, videoMime } from '../export/timelapse';
+import { hasProcess, planTimelapse, TimelapseRenderer, videoMime, type Timeline, type TimelapseMode } from '../export/timelapse';
 import { loadPref, savePref } from '../storage/idb';
 import { baseDialog, finish } from './dialogs';
 import { h } from './dom';
@@ -10,6 +10,7 @@ type Shape = 'wide' | 'tall' | 'square';
 interface TimelapsePrefs {
   seconds: number;
   shape?: Shape;
+  mode?: TimelapseMode;
 }
 
 const SHAPES: { id: Shape; label: string; w: number; h: number }[] = [
@@ -31,14 +32,18 @@ function fileName(ext: string): string {
 
 /** Timelapse dialog: replay the drawing as it was made and record it as a video. */
 export function showTimelapseDialog(app: App): void {
-  const plan = planTimelapse(app.doc);
-  if (!plan.items.length) {
+  if (!app.doc.size && !hasProcess(app.doc)) {
     app.toast('Noch nichts gezeichnet');
     return;
   }
   const prefs = loadPref<TimelapsePrefs>('timelapse', { seconds: 20 });
-  const bw = plan.box.maxX - plan.box.minX;
-  const bh = plan.box.maxY - plan.box.minY;
+  const process = hasProcess(app.doc);
+  let mode: TimelapseMode = process ? (prefs.mode ?? 'process') : 'result';
+  const plans = new Map<TimelapseMode, Timeline>();
+  const planFor = (m: TimelapseMode) => plans.get(m) ?? plans.set(m, planTimelapse(app.doc, m)).get(m)!;
+  const first = planFor(mode);
+  const bw = first.box.maxX - first.box.minX;
+  const bh = first.box.maxY - first.box.minY;
   let shape: Shape = prefs.shape ?? (bw >= bh * 1.2 ? 'wide' : bh >= bw * 1.2 ? 'tall' : 'square');
   const mime = videoMime();
 
@@ -66,11 +71,27 @@ export function showTimelapseDialog(app: App): void {
     shape = v;
     setup();
   });
+  const modeSeg = seg(
+    [
+      { id: 'process' as TimelapseMode, label: 'Ganzer Ablauf' },
+      { id: 'result' as TimelapseMode, label: 'Nur Ergebnis' },
+    ],
+    () => mode,
+    (v) => {
+      mode = v;
+      setup();
+    },
+  );
+  const modeHint = h('p', { class: 'exp-hint' });
+  if (!process) {
+    for (const b of modeSeg.row.querySelectorAll('button')) if (b.textContent === 'Ganzer Ablauf') b.disabled = true;
+  }
   const durSeg = seg(DURATIONS.map((s) => ({ id: s, label: `${s} s` })), () => prefs.seconds, (v) => (prefs.seconds = v));
 
   body.append(
     h('div', { class: 'tl-stage' }, [canvas]),
     bar,
+    h('div', { class: 'exp-field' }, [h('span', { text: 'Ablauf' }), modeSeg.row, modeHint]),
     h('div', { class: 'exp-field' }, [h('span', { text: 'Format' }), shapeSeg.row]),
     h('div', { class: 'exp-field' }, [h('span', { text: 'Länge' }), durSeg.row]),
     status,
@@ -90,12 +111,18 @@ export function showTimelapseDialog(app: App): void {
     const s = SHAPES.find((x) => x.id === shape)!;
     canvas.width = s.w;
     canvas.height = s.h;
-    renderer = new TimelapseRenderer(plan, canvas);
+    renderer = new TimelapseRenderer(planFor(mode), canvas);
     renderer.frame(1);
   }
 
   function sync(): void {
     shapeSeg.sync();
+    modeSeg.sync();
+    modeHint.textContent = !process
+      ? 'Der Ablauf wird ab jetzt mitgeschrieben – diese Zeichnung entstand noch davor.'
+      : mode === 'process'
+        ? 'Jeder Schritt: Zeichnen, Löschen, Trimmen, Verschieben, Ebenen ein- und ausblenden.'
+        : 'Die fertige Zeichnung in Zeichenreihenfolge; ausgeblendete Ebenen verschwinden am Ende.';
     durSeg.sync();
     preview.textContent = busy && !recorder ? 'Stopp' : 'Vorschau';
     record.textContent = recorder ? 'Stopp' : 'Aufnehmen';
@@ -204,7 +231,7 @@ export function showTimelapseDialog(app: App): void {
 
   const done = () => {
     stop(false);
-    savePref('timelapse', { seconds: prefs.seconds, shape });
+    savePref('timelapse', { seconds: prefs.seconds, shape, mode: process ? mode : prefs.mode });
     finish(dlg, () => {}, null);
   };
   close.addEventListener('click', done);

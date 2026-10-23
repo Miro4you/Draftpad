@@ -127,6 +127,40 @@ function applyOps(doc, ops) {
     }
   }
   doc.entities = [...byId.values()].sort((a, b) => (a.z || 0) - (b.z || 0));
+  // History for the timelapse (same format as the app keeps).
+  if (!Array.isArray(doc.journal)) doc.journal = [];
+  doc.journal.push({ t: Date.now(), ops });
+  if (doc.journal.length > MAX_JOURNAL) {
+    const n = doc.journal.length - MAX_JOURNAL / 2;
+    doc.journal = [foldJournal(doc.journal, n), ...doc.journal.slice(n)];
+  }
+}
+
+const MAX_JOURNAL = 20_000;
+
+/** The first n journal steps folded into one base step (like the app does). */
+function foldJournal(entries, n) {
+  const ents = new Map();
+  let layers = [];
+  for (const en of entries.slice(0, n)) {
+    for (const op of en.ops || []) {
+      if (op.t === 'put' && op.e) ents.set(op.e.id, op.e);
+      else if (op.t === 'del') ents.delete(op.id);
+      else if (op.t === 'layers' && Array.isArray(op.layers)) {
+        const flags = new Map(layers.map((l) => [l.id, l]));
+        layers = op.layers.map((l) => {
+          const cur = en.base ? undefined : flags.get(l.id);
+          return cur ? { ...l, visible: cur.visible, dimmed: cur.dimmed } : { ...l };
+        });
+      } else if (op.t === 'vis') {
+        layers = layers.map((l) => (l.id === op.id ? { ...l, visible: !!op.visible, dimmed: !!op.dimmed } : l));
+      }
+    }
+  }
+  const ops = [];
+  if (layers.length) ops.push({ t: 'layers', layers });
+  for (const e of [...ents.values()].sort((a, b) => (a.z || 0) - (b.z || 0))) ops.push({ t: 'put', e });
+  return { t: entries[Math.max(0, n - 1)]?.t ?? Date.now(), ops, base: true };
 }
 
 /** Save at most SAVE_MS after the first unsaved change (a steady stream of changes can't hold it off). */

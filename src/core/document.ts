@@ -2,7 +2,9 @@ import { SHEET_FORMATS } from './annotations';
 import { geomBox } from './curves';
 import { drawingScale, scaleGeneration, setDrawingScale } from './scale';
 import type { Box } from './geom';
-import type { DocFile, Entity, Layer, ViewState } from './types';
+import type { DocFile, Entity, JournalEntry, Layer, SyncOp, ViewState } from './types';
+
+export type { SyncOp } from './types';
 
 export type Change =
   | { t: 'add'; e: Entity }
@@ -10,16 +12,6 @@ export type Change =
   | { t: 'upd'; before: Entity; after: Entity }
   | { t: 'layers'; before: Layer[]; after: Layer[]; activeBefore: string; activeAfter: string }
   | { t: 'scale'; before: number; after: number };
-
-/**
- * A change in a form other devices can apply (live editing): entities are put or
- * deleted as a whole, layers sent as the full list. Applying one twice is harmless.
- */
-export type SyncOp =
-  | { t: 'put'; e: Entity }
-  | { t: 'del'; id: string }
-  | { t: 'layers'; layers: Layer[] }
-  | { t: 'scale'; scale: number };
 
 /** The sync ops of changes (or of undoing them). */
 export function toSyncOps(changes: readonly Change[], inverse = false): SyncOp[] {
@@ -47,6 +39,60 @@ export function newId(prefix: string): string {
 }
 
 const MAX_HISTORY = 300;
+/** Journal steps kept; beyond that the oldest half is folded into one base entry. */
+const MAX_JOURNAL = 20_000;
+
+/**
+ * The state after the first `n` journal entries, as a single base entry
+ * (current layers with their flags, then the entities in drawing order).
+ */
+export function foldJournal(entries: readonly JournalEntry[], n: number): JournalEntry {
+  const ents = new Map<string, Entity>();
+  let layers: Layer[] = [];
+  for (const en of entries.slice(0, n)) {
+    for (const op of en.ops) {
+      if (op.t === 'put') ents.set(op.e.id, op.e);
+      else if (op.t === 'del') ents.delete(op.id);
+      else if (op.t === 'layers') {
+        const flags = new Map(layers.map((l) => [l.id, l]));
+        layers = op.layers.map((l) => {
+          const cur = en.base ? undefined : flags.get(l.id);
+          return cur ? { ...l, visible: cur.visible, dimmed: cur.dimmed } : { ...l };
+        });
+      } else if (op.t === 'vis') {
+        layers = layers.map((l) => (l.id === op.id ? { ...l, visible: op.visible, dimmed: op.dimmed } : l));
+      }
+    }
+  }
+  const ops: SyncOp[] = [];
+  if (layers.length) ops.push({ t: 'layers', layers });
+  for (const e of [...ents.values()].sort((a, b) => a.z - b.z)) ops.push({ t: 'put', e });
+  return { t: entries[Math.max(0, n - 1)]?.t ?? Date.now(), ops, base: true };
+}
+
+/** Coordinates rounded for saving (µm, angles finer). */
+function roundEntity(e: Entity): Entity {
+  const round = (v: number) => Math.round(v * 1000) / 1000;
+  const rv = (v: { x: number; y: number }) => ({ x: round(v.x), y: round(v.y) });
+  switch (e.kind) {
+    case 'line':
+      return { ...e, a: rv(e.a), b: rv(e.b) };
+    case 'stroke':
+      return { ...e, pts: e.pts.map(round) };
+    case 'circle':
+      return { ...e, c: rv(e.c), r: round(e.r) };
+    case 'arc':
+      // Angles need more precision than millimetres.
+      return { ...e, c: rv(e.c), r: round(e.r), start: Math.round(e.start * 1e7) / 1e7, sweep: Math.round(e.sweep * 1e7) / 1e7 };
+    case 'hatch':
+      return { ...e, loops: e.loops.map((l) => l.map(round)) };
+    case 'text':
+    case 'sheet':
+      return { ...e, at: rv(e.at) };
+    default:
+      return e;
+  }
+}
 const bboxCache = new WeakMap<Entity, { g: number; box: Box }>();
 
 /** How far centre lines reach beyond a circle of radius r (mm). */
@@ -100,6 +146,7 @@ export class SketchDocument {
   private byLayerCache: { version: number; map: Map<string, Entity[]> } | null = null;
   private listeners = new Set<() => void>();
   private opListeners = new Set<(ops: SyncOp[]) => void>();
+  private journal: JournalEntry[] = [];
 
   constructor() {
     this.reset();
@@ -113,6 +160,7 @@ export class SketchDocument {
     this.activeLayerId = sketch.id;
     this.entities.clear();
     this.setScaleRaw(0);
+    this.journal = [];
     this.nextZ = 1;
     this.undoStack = [];
     this.redoStack = [];
@@ -127,7 +175,24 @@ export class SketchDocument {
   }
 
   private emitOps(ops: SyncOp[]): void {
-    if (ops.length) for (const fn of this.opListeners) fn(ops);
+    if (!ops.length) return;
+    this.log(ops);
+    for (const fn of this.opListeners) fn(ops);
+  }
+
+  /** Keep a step in the journal (for the timelapse). */
+  private log(ops: readonly SyncOp[]): void {
+    if (!ops.length) return;
+    this.journal.push({ t: Date.now(), ops: [...ops] });
+    if (this.journal.length > MAX_JOURNAL) {
+      const n = this.journal.length - MAX_JOURNAL / 2;
+      this.journal = [foldJournal(this.journal, n), ...this.journal.slice(n)];
+    }
+  }
+
+  /** How the drawing came about, step by step. */
+  get history(): readonly JournalEntry[] {
+    return this.journal;
   }
 
   /**
@@ -135,6 +200,7 @@ export class SketchDocument {
    * keep this device's display flags (visible, locked, dimmed).
    */
   applyRemote(ops: readonly SyncOp[]): void {
+    this.log(ops);
     for (const op of ops) {
       if (op.t === 'put') {
         this.entities.set(op.e.id, op.e);
@@ -143,6 +209,8 @@ export class SketchDocument {
         this.entities.delete(op.id);
       } else if (op.t === 'scale') {
         if (op.scale > 0) this.setScaleRaw(op.scale);
+      } else if (op.t === 'vis') {
+        // Each device keeps its own view of the layers.
       } else if (op.layers.length) {
         const flags = new Map(this.layers.map((l) => [l.id, l]));
         this.layers = op.layers.map((l) => {
@@ -333,8 +401,14 @@ export class SketchDocument {
    * Change display flags (visible / locked / dimmed) of a layer. Like in other
    * drawing apps these are not undo steps – undo only covers drawing and layer structure.
    */
-  patchLayerView(id: string, patch: Partial<Pick<Layer, 'visible' | 'locked' | 'dimmed'>>): void {
+  patchLayerView(id: string, patch: Partial<Pick<Layer, 'visible' | 'locked' | 'dimmed'>>, record = true): void {
+    const before = this.layer(id);
     this.layers = this.layers.map((l) => (l.id === id ? { ...l, ...patch } : l));
+    const after = this.layer(id);
+    // Showing, hiding and fading go into the journal (the timelapse shows them).
+    if (record && before && after && (before.visible !== after.visible || before.dimmed !== after.dimmed)) {
+      this.emitOps([{ t: 'vis', id, visible: after.visible, dimmed: after.dimmed }]);
+    }
     this.touch();
   }
 
@@ -421,30 +495,10 @@ export class SketchDocument {
   // ---- (de)serialisation ---------------------------------------------------
 
   toFile(view?: ViewState): DocFile {
-    const round = (v: number) => Math.round(v * 1000) / 1000;
-    const entities = [...this.entities.values()]
-      .sort((a, b) => a.z - b.z)
-      .map((e): Entity => {
-        const rv = (v: { x: number; y: number }) => ({ x: round(v.x), y: round(v.y) });
-        switch (e.kind) {
-          case 'line':
-            return { ...e, a: rv(e.a), b: rv(e.b) };
-          case 'stroke':
-            return { ...e, pts: e.pts.map(round) };
-          case 'circle':
-            return { ...e, c: rv(e.c), r: round(e.r) };
-          case 'arc':
-            // Angles need more precision than millimetres.
-            return { ...e, c: rv(e.c), r: round(e.r), start: Math.round(e.start * 1e7) / 1e7, sweep: Math.round(e.sweep * 1e7) / 1e7 };
-          case 'hatch':
-            return { ...e, loops: e.loops.map((l) => l.map(round)) };
-          case 'text':
-          case 'sheet':
-            return { ...e, at: rv(e.at) };
-          default:
-            return e;
-        }
-      });
+    const entities = [...this.entities.values()].sort((a, b) => a.z - b.z).map(roundEntity);
+    const journal = this.journal.map(
+      (en): JournalEntry => ({ ...en, ops: en.ops.map((op) => (op.t === 'put' ? { t: 'put', e: roundEntity(op.e) } : op)) }),
+    );
     return {
       format: 'skizzen-cad',
       version: 1,
@@ -453,6 +507,7 @@ export class SketchDocument {
       entities,
       nextZ: this.nextZ,
       scale: this.scaleValue || undefined,
+      journal,
       view,
     };
   }
@@ -471,6 +526,12 @@ export class SketchDocument {
     this.nextZ = Math.max(f.nextZ || 0, maxZ + 1);
     // Files from before the drawing scale were drawn at 1:1.
     this.setScaleRaw(f.scale ?? (f.entities.length ? 1 : 0));
+    // Older files: what is there counts as drawn before the history began.
+    this.journal = f.journal?.length
+      ? f.journal
+      : f.entities.length
+        ? [foldJournal([{ t: Date.now(), ops: [{ t: 'layers', layers: f.layers }, ...f.entities.map((e): SyncOp => ({ t: 'put', e }))], base: true }], 1)]
+        : [];
     this.undoStack = [];
     this.redoStack = [];
     this.pending = null;
@@ -487,44 +548,80 @@ function isVec(v: unknown): boolean {
   return !!v && typeof v === 'object' && isNum((v as { x: unknown }).x) && isNum((v as { y: unknown }).y);
 }
 
+function validLayer(l: Partial<Layer> | null | undefined, i: number): Layer | null {
+  if (!l || typeof l.id !== 'string') return null;
+  return {
+    id: l.id,
+    name: typeof l.name === 'string' ? l.name : `Ebene ${i + 1}`,
+    visible: l.visible !== false,
+    locked: !!l.locked,
+    dimmed: !!l.dimmed,
+  };
+}
+
+/** Whether an entity from a file has what drawing it needs. */
+function validEntity(e: Entity | null | undefined): e is Entity {
+  if (!e || typeof e.id !== 'string' || typeof e.layerId !== 'string' || !e.style) return false;
+  switch (e.kind) {
+    case 'line':
+      return isVec(e.a) && isVec(e.b);
+    case 'stroke':
+      return Array.isArray(e.pts) && e.pts.length >= 4 && e.pts.every(isNum);
+    case 'circle':
+      return isVec(e.c) && isNum(e.r) && e.r > 0;
+    case 'arc':
+      return isVec(e.c) && isNum(e.r) && e.r > 0 && isNum(e.start) && isNum(e.sweep) && e.sweep !== 0;
+    case 'hatch':
+      return Array.isArray(e.loops) && e.loops.every((l) => Array.isArray(l) && l.length >= 6 && l.every(isNum));
+    case 'dim':
+      return isVec(e.p1) && isVec(e.p2) && isNum(e.off);
+    case 'datum':
+    case 'gtol':
+      return isVec(e.at) && isVec(e.p);
+    case 'text':
+      return isVec(e.at) && typeof e.text === 'string' && isNum(e.size) && e.size > 0 && isNum(e.angle);
+    case 'sheet':
+      return isVec(e.at) && SHEET_FORMATS.includes(e.format) && isNum(e.scale) && e.scale > 0 && !!e.fields;
+    default:
+      return false;
+  }
+}
+
+/** The usable part of a saved journal (broken steps and ops are left out). */
+function validJournal(raw: unknown[]): JournalEntry[] {
+  const out: JournalEntry[] = [];
+  for (const en of raw as Partial<JournalEntry>[]) {
+    if (!en || !isNum(en.t) || !Array.isArray(en.ops)) continue;
+    const ops: SyncOp[] = [];
+    for (const op of en.ops as SyncOp[]) {
+      if (!op || typeof op !== 'object') continue;
+      if (op.t === 'put' && validEntity(op.e)) ops.push(op);
+      else if (op.t === 'del' && typeof op.id === 'string') ops.push(op);
+      else if (op.t === 'scale' && isNum(op.scale) && op.scale > 0) ops.push(op);
+      else if (op.t === 'vis' && typeof op.id === 'string') ops.push({ t: 'vis', id: op.id, visible: !!op.visible, dimmed: !!op.dimmed });
+      else if (op.t === 'layers' && Array.isArray(op.layers)) {
+        const ls = op.layers.map(validLayer).filter((l): l is Layer => !!l);
+        if (ls.length) ops.push({ t: 'layers', layers: ls });
+      }
+    }
+    if (ops.length) out.push(en.base ? { t: en.t, ops, base: true } : { t: en.t, ops });
+  }
+  return out;
+}
+
 export function validateFile(data: unknown): DocFile {
   const f = data as Partial<DocFile>;
   if (!f || typeof f !== 'object' || f.format !== 'skizzen-cad') throw new Error('Keine Draftpad-Datei');
   if (f.version !== 1) throw new Error(`Unbekannte Dateiversion ${String(f.version)}`);
   if (!Array.isArray(f.layers) || f.layers.length === 0) throw new Error('Datei enthält keine Ebenen');
   if (!Array.isArray(f.entities)) throw new Error('Datei enthält keine Objekte');
-  const layerIds = new Set<string>();
-  const layers: Layer[] = f.layers.map((l, i) => {
-    if (!l || typeof l.id !== 'string') throw new Error('Ungültige Ebene');
-    layerIds.add(l.id);
-    return {
-      id: l.id,
-      name: typeof l.name === 'string' ? l.name : `Ebene ${i + 1}`,
-      visible: l.visible !== false,
-      locked: !!l.locked,
-      dimmed: !!l.dimmed,
-    };
+  const layers = f.layers.map((l, i) => {
+    const v = validLayer(l, i);
+    if (!v) throw new Error('Ungültige Ebene');
+    return v;
   });
-  const entities: Entity[] = [];
-  for (const e of f.entities) {
-    if (!e || typeof e.id !== 'string' || !layerIds.has(e.layerId) || !e.style) continue;
-    if (e.kind === 'line' && isVec(e.a) && isVec(e.b)) entities.push(e);
-    else if (e.kind === 'stroke' && Array.isArray(e.pts) && e.pts.length >= 4 && e.pts.every(isNum)) entities.push(e);
-    else if (e.kind === 'circle' && isVec(e.c) && isNum(e.r) && e.r > 0) entities.push(e);
-    else if (e.kind === 'arc' && isVec(e.c) && isNum(e.r) && e.r > 0 && isNum(e.start) && isNum(e.sweep) && e.sweep !== 0) {
-      entities.push(e);
-    } else if (e.kind === 'hatch' && Array.isArray(e.loops) && e.loops.every((l) => Array.isArray(l) && l.length >= 6 && l.every(isNum))) {
-      entities.push(e);
-    } else if (e.kind === 'dim' && isVec(e.p1) && isVec(e.p2) && isNum(e.off)) {
-      entities.push(e);
-    } else if ((e.kind === 'datum' || e.kind === 'gtol') && isVec(e.at) && isVec(e.p)) {
-      entities.push(e);
-    } else if (e.kind === 'text' && isVec(e.at) && typeof e.text === 'string' && isNum(e.size) && e.size > 0 && isNum(e.angle)) {
-      entities.push(e);
-    } else if (e.kind === 'sheet' && isVec(e.at) && SHEET_FORMATS.includes(e.format) && isNum(e.scale) && e.scale > 0 && e.fields) {
-      entities.push(e);
-    }
-  }
+  const layerIds = new Set(layers.map((l) => l.id));
+  const entities = f.entities.filter((e) => validEntity(e) && layerIds.has(e.layerId));
   return {
     format: 'skizzen-cad',
     version: 1,
@@ -533,6 +630,7 @@ export function validateFile(data: unknown): DocFile {
     entities,
     nextZ: isNum(f.nextZ) ? f.nextZ : 1,
     scale: isNum(f.scale) && f.scale > 0 ? f.scale : undefined,
+    journal: Array.isArray(f.journal) ? validJournal(f.journal) : undefined,
     view: f.view && isNum(f.view.scale) && isNum(f.view.rot) && isNum(f.view.tx) && isNum(f.view.ty) ? f.view : undefined,
   };
 }
