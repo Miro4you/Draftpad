@@ -32,3 +32,4 @@ Gesammelte Rückmeldungen vom iPad-Test und ihr Stand.
 | 25 | Zeitraffer: ganzer Prozess inkl. Löschen und Trimmen | ✓ Ablauf wird ab jetzt in der Zeichnung mitgeschrieben; Auswahl „Ganzer Ablauf“ / „Nur Ergebnis“ |
 | 26 | Zeitraffer: Auflösung wählbar, nur ein Ausschnitt | ✓ 720p–4K; Alles / Ansicht / Auswahl / Blatt |
 | 27 | Aufnehmen-Button in der oberen Leiste | ✓ Kamera-Taste oben rechts; im Dialog stehen Aufnehmen/Vorschau oben |
+| 28 | Kraftpfeile einzeichnen | offen – wird mit den nächsten Punkten gesammelt |
