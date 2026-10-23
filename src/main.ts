@@ -92,6 +92,7 @@ document.addEventListener('app:download', download);
 document.addEventListener('app:export', () => showExportDialog(app));
 document.addEventListener('app:part', () => void choosePart(app));
 document.addEventListener('app:cloud', () => showCloudDialog(app));
+document.addEventListener('app:timelapse', () => showTimelapseDialog(app));
 document.addEventListener('app:open', open);
 
 // ---- UI -------------------------------------------------------------------------------

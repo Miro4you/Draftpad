@@ -1220,13 +1220,44 @@ canvas.sym-canvas {
 }
 
 dialog.timelapse-dlg {
-  width: min(560px, calc(100% - 32px));
+  width: min(720px, calc(100% - 32px));
+}
+
+.tl-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.tl-head .dlg-title {
+  margin: 0;
+}
+
+.tl-head .dlg-actions {
+  margin-top: 0;
+}
+
+.tl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  column-gap: 16px;
+}
+
+.tl-grid .tl-wide {
+  grid-column: 1 / -1;
+}
+
+.tl-result:empty {
+  display: none;
 }
 
 .tl-stage {
   display: grid;
   place-items: center;
-  height: min(42dvh, 320px);
+  height: min(36dvh, 300px);
   border-radius: 10px;
   background: var(--hover);
   overflow: hidden;

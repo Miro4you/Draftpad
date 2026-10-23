@@ -4,6 +4,7 @@ const svg = (body: string, extra = '') =>
   `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${body}</svg>`;
 
 export const icons = {
+  record: svg('<rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="m16 10.5 5-3v9l-5-3"/><circle cx="9.5" cy="12" r="2.6" fill="#e5484d" stroke="none"/>'),
   freehand: svg('<path d="M3.5 16.5c1.6-2.9 3-7.5 5.2-7.5 2.4 0 .6 7.2 3.3 7.2 2.3 0 3.1-6.7 5.6-6.7 1.4 0 2 1.3 2.9 2.6"/>'),
   line: svg('<path d="M5.5 18.5 18.5 5.5"/><circle cx="5" cy="19" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="5" r="1.7" fill="currentColor" stroke="none"/>'),
   select: svg('<path d="M6 3.5 18 13l-5.2.9 3.1 5.8-2.2 1.2-3.1-5.8L6.6 19z"/>'),

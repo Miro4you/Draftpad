@@ -221,9 +221,14 @@ export class TimelapseRenderer {
   private done = 0;
   private baseValid = false;
 
+  /** World box drawn this frame (the camera's view, for culling). */
+  private view: Box;
+
+  /** `box`: the part of the drawing to show (default: all of it). */
   constructor(
     private plan: Timeline,
     readonly out: HTMLCanvasElement,
+    box: Box = plan.box,
   ) {
     this.base = document.createElement('canvas');
     this.base.width = out.width;
@@ -232,7 +237,8 @@ export class TimelapseRenderer {
     this.outCtx = out.getContext('2d')!;
     this.basePainter = new Painter(this.baseCtx);
     this.outPainter = new Painter(this.outCtx);
-    this.cam = fitCamera(plan.box, out.width, out.height);
+    this.cam = fitCamera(box, out.width, out.height);
+    this.view = this.cam.visibleBox(out.width, out.height);
     this.reset();
   }
 
@@ -268,7 +274,7 @@ export class TimelapseRenderer {
     const busy = new Set<string>();
     const fading = new Set(cur?.vis.map((v) => v.id) ?? []);
     if (cur) for (const e of [...cur.dels, ...cur.upds.map((u) => u.before)]) busy.add(e.id);
-    this.basePainter.begin(this.cam, 1, this.plan.box);
+    this.basePainter.begin(this.cam, 1, this.view);
     for (const e of this.sorted(this.ents.values())) {
       if (busy.has(e.id) || fading.has(e.layerId)) continue;
       const a = layerAlpha(this.layers, e.layerId);
@@ -319,7 +325,7 @@ export class TimelapseRenderer {
         }
         const visible = draw.filter((d) => d.alpha > 0.002);
         if (visible.length) {
-          this.outPainter.begin(this.cam, 1, this.plan.box);
+          this.outPainter.begin(this.cam, 1, this.view);
           for (const d of visible) this.outPainter.draw(d.e, d.alpha);
         }
       }

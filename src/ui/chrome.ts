@@ -69,9 +69,15 @@ export class ViewBar {
       layers.close();
       menu.toggle();
     });
+    const recordBtn = h('button', { class: 'btn', title: 'Zeitraffer-Video aufnehmen', html: icons.record });
+    recordBtn.addEventListener('click', () => {
+      menu.close();
+      layers.close();
+      document.dispatchEvent(new CustomEvent('app:timelapse'));
+    });
     this.liveBtn = h('button', { class: 'btn wide live-badge', title: 'Live-Bearbeitung (Online-Ablage)' });
     this.liveBtn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('app:cloud')));
-    this.el = h('div', { class: 'viewbar panel' }, [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, menuBtn]);
+    this.el = h('div', { class: 'viewbar panel' }, [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, recordBtn, menuBtn]);
     app.live?.onChange(() => this.update());
     app.onUiChange(() => this.update());
     app.onViewChange(() => this.update());
