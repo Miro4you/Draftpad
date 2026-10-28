@@ -92,3 +92,18 @@ describe('mechanics transforms and files', () => {
     expect(f.entities.map((e) => e.id)).toEqual(['F_1', 's', 'm', 'q']);
   });
 });
+
+describe('label resolver', () => {
+  it('shows host values for labels and typed dimension texts', async () => {
+    const { setLabelResolver } = await import('../src/core/annotations');
+    setLabelResolver((l) => (l === 'F_1' ? 'F_1 = 500 N' : l === 'l' ? 'l = 2 m' : l));
+    try {
+      expect(layoutAnno(force('F_1')).texts.map((t) => t.text).join('')).toBe('F1 = 500 N');
+      const dim = { ...base, id: 'd', kind: 'dim' as const, type: 'lin' as const, p1: { x: 0, y: 0 }, p2: { x: 40, y: 0 }, dir: 0, off: 10, text: 'l' };
+      expect(layoutAnno(dim).texts.map((t) => t.text)).toEqual(['l = 2 m']);
+      expect(layoutAnno({ ...dim, id: 'd2', text: undefined }).texts.map((t) => t.text)).toEqual(['40']);
+    } finally {
+      setLabelResolver(null);
+    }
+  });
+});

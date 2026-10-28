@@ -114,7 +114,7 @@ In der Online-Ablage bei einer Zeichnung „Live“ wählen – auf jedem Gerät
 ## In andere Apps einbetten (z. B. MathPad)
 
 - `src/embed.ts` → `mountDraftpad(root, { drawing, onChange, onDone, labelResolver, theme })` startet den Editor in einer eigenen Seite (typisch: ein iframe derselben Herkunft, denn der Editor bringt seitenweite Styles und Tastenkürzel mit). Kompaktmodus (Standard): nur Tusche dünn/dick, keine Ebenen, kein Zeitraffer, keine Online-Ablage, kein Blatt; oben ein „Fertig“-Knopf. Änderungen gehen (ohne Zeitraffer-Verlauf) an `onChange` statt ins Browser-Autosave.
-- `labelResolver` macht aus gespeicherten Beschriftungen die Anzeige, z. B. `F_1` → `F_1 = 500 N` aus den Variablen des Gastgebers; `handle.refreshLabels()` zeichnet nach Wertänderungen neu.
+- `labelResolver` macht aus gespeicherten Beschriftungen (Kräfte, Momente, Streckenlasten und eingetippte Maßtexte) die Anzeige, z. B. `F_1` → `F_1 = 500 N` oder `l` → `l = 2 m` aus den Variablen des Gastgebers; `handle.refreshLabels()` zeichnet nach Wertänderungen neu.
 - `src/export/drawing-svg.ts` → `drawingToSvg(drawing, { theme })` liefert die Zeichnung als SVG ohne Editor und ohne Styles – zum Anzeigen im Gastgeber.
 - Demo: `npm run dev`, dann `/embed-demo.html`.
 

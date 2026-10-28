@@ -227,7 +227,8 @@ export function dragDimText(e: DimEntity, q: Vec, stepDeg = 0): DimEntity {
 
 function layoutDim(e: DimEntity): AnnoLayout {
   const L: AnnoLayout = { lines: [], arcs: [], fills: [], texts: [] };
-  const text = dimText(e);
+  // A typed dimension text can stand for a host value ("l" → "l = 2 m"), like labels.
+  const text = e.text ? shownLabel(e.text) : dimText(e);
   const w = textWidth(text, TEXT_H);
   if (e.type === 'lin') {
     const { n, s1, s2, base, d1, d2, len, along, u, m } = linFrame(e);
@@ -566,7 +567,8 @@ const SUB_SCALE = 0.7;
 
 /**
  * Turns the stored label into the shown text – a host (e.g. MathPad) can show
- * "F_1 = 500 N" for a label "F_1" from its own variables. Default: as stored.
+ * "F_1 = 500 N" for a label "F_1" from its own variables. Applies to labels of
+ * forces, moments and line loads and to typed dimension texts. Default: as stored.
  */
 let labelResolver: ((label: string) => string) | null = null;
 
