@@ -1,5 +1,5 @@
 import { dist, type Vec } from './geom';
-import { drawingScale, scaleGeneration } from './scale';
+import { drawingScale, invalidateLayouts, scaleGeneration } from './scale';
 import type { Annotation, DatumEntity, DimEntity, ForceEntity, GpsSymbol, GtolEntity, LaidOut, LineLoadEntity, MomentEntity, SheetEntity, SheetFormat, SupportEntity, TextEntity } from './types';
 
 /**
@@ -565,6 +565,27 @@ const MECH = { TRI_H: 7, TRI_HALF: 4.2, GROUND: 8, HATCH: 2, HATCH_GAP: 2, ROLLE
 const SUB_SCALE = 0.7;
 
 /**
+ * Turns the stored label into the shown text – a host (e.g. MathPad) can show
+ * "F_1 = 500 N" for a label "F_1" from its own variables. Default: as stored.
+ */
+let labelResolver: ((label: string) => string) | null = null;
+
+export function setLabelResolver(fn: ((label: string) => string) | null): void {
+  labelResolver = fn;
+  invalidateLayouts();
+}
+
+/** Shown text of a free-body label. */
+export function shownLabel(label: string): string {
+  if (!labelResolver) return label;
+  try {
+    return labelResolver(label) ?? label;
+  } catch {
+    return label;
+  }
+}
+
+/**
  * Display text of a label: "F_1 = 500 N" → main "F", subscript "1", rest " = 500 N".
  * The subscript runs up to the next space or "=".
  */
@@ -583,7 +604,8 @@ export function labelWidth(label: string, size = TEXT_H): number {
  * Label (with subscript) centred on `c` (paper-horizontal). `away` pushes the
  * label box off `c` in that direction so it does not cover the symbol.
  */
-function pushLabel(L: AnnoLayout, label: string, c: Vec, away: Vec = { x: 0, y: 0 }): void {
+function pushLabel(L: AnnoLayout, stored: string, c: Vec, away: Vec = { x: 0, y: 0 }): void {
+  const label = shownLabel(stored);
   if (!label.trim()) return;
   const { main, sub, rest } = splitLabel(label);
   const subH = TEXT_H * SUB_SCALE;

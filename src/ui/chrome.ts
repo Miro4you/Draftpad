@@ -41,6 +41,7 @@ export class ViewBar {
     private app: App,
     private layersPanel: LayersPanel,
     menu: Menu,
+    done?: { label: string; onClick: () => void },
   ) {
     const layers = layersPanel;
     this.compass = h('button', { class: 'btn', title: 'Ansicht gerade stellen (R)' });
@@ -77,7 +78,17 @@ export class ViewBar {
     });
     this.liveBtn = h('button', { class: 'btn wide live-badge', title: 'Live-Bearbeitung (Online-Ablage)' });
     this.liveBtn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('app:cloud')));
-    this.el = h('div', { class: 'viewbar panel' }, [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, recordBtn, menuBtn]);
+    // The compact tool set (inside a host app) has no layers and no timelapse.
+    const items = app.compact ? [this.compass, this.zoom, this.scaleBtn, menuBtn] : [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, recordBtn, menuBtn];
+    if (done) {
+      const doneBtn = h('button', { class: 'btn done-btn', text: done.label, title: `${done.label} – zurück` });
+      doneBtn.addEventListener('click', () => {
+        menu.close();
+        done.onClick();
+      });
+      items.push(doneBtn);
+    }
+    this.el = h('div', { class: 'viewbar panel' }, items);
     app.live?.onChange(() => this.update());
     app.onUiChange(() => this.update());
     app.onViewChange(() => this.update());
@@ -290,17 +301,23 @@ export class Menu {
       themeRow.append(b);
     }
     this.themeRow = themeRow;
+    // Inside a host app the host keeps the drawing and sets the theme.
+    const fileItems = app.compact
+      ? [item('Exportieren (PDF, SVG, PNG, JPEG) …', actions.exportFile, '⇧⌘E')]
+      : [
+          item('Neue Zeichnung', actions.newDrawing),
+          item('Datei öffnen …', actions.open, '⌘O'),
+          item('Datei herunterladen', actions.download, '⌘S'),
+          item('Exportieren (PDF, SVG, PNG, JPEG) …', actions.exportFile, '⇧⌘E'),
+          item('Zeitraffer-Video …', actions.timelapse),
+          item('Online-Ablage …', actions.cloud),
+          item('Blatt & Schriftfeld …', actions.sheet),
+        ];
     this.el.append(
-      item('Neue Zeichnung', actions.newDrawing),
-      item('Datei öffnen …', actions.open, '⌘O'),
-      item('Datei herunterladen', actions.download, '⌘S'),
-      item('Exportieren (PDF, SVG, PNG, JPEG) …', actions.exportFile, '⇧⌘E'),
-      item('Zeitraffer-Video …', actions.timelapse),
-      item('Online-Ablage …', actions.cloud),
-      item('Blatt & Schriftfeld …', actions.sheet),
+      ...fileItems,
       h('div', { class: 'menu-sep' }),
       h('div', { class: 'menu-label', text: 'Darstellung' }),
-      themeRow,
+      ...(app.compact ? [] : [themeRow]),
       toggle('grid', 'Raster'),
       toggle('handles', 'Korrekturgriffe nach dem Zeichnen'),
       toggle('centerMarks', 'Mittellinien bei neuen Kreisen'),

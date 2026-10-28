@@ -6,7 +6,7 @@ import { boxExpand, boxesIntersect, boxUnion, drawingAngleDeg, dist, emptyBox, i
 import { DEFAULT_STYLE, PAPER_COLORS, penColor, setPenTheme, type Theme } from './core/pens';
 import { findSnap, snapAngle, snapCandidates, softSnapAngle, type AngleMode, type SnapHit } from './core/snap';
 import { mirrorGroup, transformEntity, type Affine } from './core/transform';
-import { isAnnotation, isMech, type Entity, type HatchPattern, type LineEntity, type Style } from './core/types';
+import { isAnnotation, isMech, type DocFile, type Entity, type HatchPattern, type LineEntity, type Style } from './core/types';
 import { ACCENT, drawCursorDot, drawMirrorToggle, drawSnapMarker, formatAngle, formatLength } from './render/overlay';
 import { Painter } from './render/painter';
 import { SceneRenderer } from './render/scene';
@@ -93,6 +93,9 @@ export interface Settings {
   /** New moments turn counter-clockwise (mathematically positive). */
   momentCcw: boolean;
 }
+
+/** Ink widths offered in the compact tool set (thin, thick). */
+export const COMPACT_WIDTHS = [0.25, 0.5];
 
 /** With the angle snap off, lines still settle onto 0°/45°/90°… when this close (degrees). */
 export const SOFT_ANGLE_TOL = 1;
@@ -244,6 +247,51 @@ export class App {
   }
 
   // ---- lifecycle ------------------------------------------------------------
+
+  /**
+   * Embedded use (e.g. inside MathPad): changes are handed to this callback
+   * instead of the browser autosave – without the timelapse journal, which
+   * would only bloat the host's storage.
+   */
+  persist: ((file: DocFile) => void) | null = null;
+
+  /** Reduced tool set for quick sketches inside a host app (see EmbedOptions.compact). */
+  compact = false;
+
+  /** Switch to the compact tool set: ink only (thin 0,25 / thick 0,5), no tracing. */
+  useCompactStyle(): void {
+    this.compact = true;
+    if (this.style.pen !== 'ink' || !COMPACT_WIDTHS.includes(this.style.width)) {
+      this.style = { ...this.style, pen: 'ink', width: 0.5 };
+    }
+    if (this.toolId === 'trace') this.toolId = 'line';
+  }
+
+  /** Redraw everything (e.g. after label texts changed from outside). */
+  redrawAll(): void {
+    this.docDirty = true;
+    this.sceneDirty = true;
+    this.overlayDirty = true;
+    this.snapshot = null;
+    this.scheduleFrame();
+  }
+
+  /** Start embedded with the host's drawing (or an empty one). */
+  loadEmbedded(data: unknown | null): void {
+    if (data) {
+      try {
+        this.doc.loadFile(data);
+      } catch (err) {
+        console.warn('Zeichnung konnte nicht geladen werden', err);
+        this.doc.reset();
+      }
+    }
+    this.loaded = true;
+    if (this.doc.size > 0) this.fitAll();
+    else this.resetView();
+    this.viewChanged();
+    this.emit();
+  }
 
   async load(): Promise<void> {
     const saved = await idbGet<unknown>(AUTOSAVE_KEY);
@@ -958,6 +1006,11 @@ export class App {
   async saveNow(): Promise<void> {
     window.clearTimeout(this.saveTimer);
     if (!this.loaded) return;
+    if (this.persist) {
+      const { journal: _journal, ...file } = this.doc.toFile(this.cam.state);
+      this.persist(file);
+      return;
+    }
     const ok = await idbSet(AUTOSAVE_KEY, this.doc.toFile(this.cam.state));
     if (!ok) console.warn('Automatisches Speichern fehlgeschlagen');
   }

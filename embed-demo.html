@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Draftpad – eingebettet (Demo)</title>
+  </head>
+  <body>
+    <!-- Entwicklungs-Demo für die Einbettung (npm run dev → /embed-demo.html). Nicht Teil des Builds. -->
+    <div id="app"></div>
+    <script type="module">
+      import { mountDraftpad } from '/src/embed.ts';
+      const values = { F_1: '500 N', q_1: '2 kN/m' };
+      window.changes = 0;
+      window.handle = mountDraftpad(document.getElementById('app'), {
+        compact: true,
+        onChange: (file) => { window.changes++; window.lastFile = file; },
+        onDone: () => { window.done = true; },
+        labelResolver: (l) => (values[l] ? `${l} = ${values[l]}` : l),
+      });
+      window.values = values;
+    </script>
+  </body>
+</html>

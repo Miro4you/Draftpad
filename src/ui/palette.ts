@@ -1,4 +1,4 @@
-import type { App, ToolId } from '../app';
+import { COMPACT_WIDTHS, type App, type ToolId } from '../app';
 import { formatWidth, HARDNESSES, INK_WIDTHS, LINE_TYPES, PEN_NAMES, PENCIL_WIDTHS } from '../core/pens';
 import type { Hardness, HatchPattern, LineType, PenKind } from '../core/types';
 import { HATCH_NAMES } from '../render/annotations';
@@ -261,7 +261,7 @@ export class Palette {
   private redoBtn: HTMLButtonElement;
   private colors: ColorPopover;
   private flyouts: Flyout[] = [];
-  private penItems: HTMLButtonElement[] = [];
+  private penItems = new Map<number, HTMLButtonElement>();
   private hardItems = new Map<Hardness, HTMLButtonElement>();
   private lineItems = new Map<LineType, HTMLButtonElement>();
   private angleItems = new Map<string, HTMLButtonElement>();
@@ -419,8 +419,9 @@ export class Palette {
     const specials = new ToolGroup(
       app,
       'specials',
-      'Sonderwerkzeuge: Ecken verrunden, Nachzeichnen, Normteile',
-      SPECIALS,
+      app.compact ? 'Sonderwerkzeuge: Ecken verrunden, Normteile' : 'Sonderwerkzeuge: Ecken verrunden, Nachzeichnen, Normteile',
+      // Tracing needs layers, which the compact tool set leaves out.
+      app.compact ? SPECIALS.filter((i) => i.id !== 'trace') : SPECIALS,
       [
         { el: filletOpts, when: (a) => a.toolId === 'fillet' },
         { el: partOpts, when: (a) => a.toolId === 'part' },
@@ -430,7 +431,7 @@ export class Palette {
     this.groups = [shapes, hatch, annos, mechs, erasers, specials];
 
     // Pens.
-    this.penBtn = h('button', { class: 'chip pen-trigger', title: 'Stift wählen (⇧1–9)', 'aria-label': 'Stift' });
+    this.penBtn = h('button', { class: 'chip pen-trigger', title: app.compact ? 'Linienstärke: dünn oder dick' : 'Stift wählen (⇧1–9)', 'aria-label': 'Stift' });
     const pencils = h('div', { class: 'pen-row' }, [h('span', { class: 'row-label', text: 'Bleistift' })]);
     const inks = h('div', { class: 'pen-row' }, [h('span', { class: 'row-label', text: 'Tusche' })]);
     const hardRow = h('div', { class: 'pen-row' }, [h('span', { class: 'row-label', text: 'Härte' })]);
@@ -442,12 +443,18 @@ export class Palette {
       hardSeg.append(b);
     }
     hardRow.append(hardSeg);
-    const penFly: Flyout = new Flyout([pencils, hardRow, inks], side, 'fly-pens');
+    // Compact tool set: just a thin and a thick ink pen.
+    const compact = app.compact;
+    if (compact) inks.firstElementChild!.textContent = 'Linie';
+    const penFly: Flyout = new Flyout(compact ? [inks] : [pencils, hardRow, inks], side, 'fly-pens');
     ALL_PENS.forEach((p, i) => {
-      const title = `${PEN_NAMES[p.pen]} ${formatWidth(p.width)} mm (⇧${i + 1})`;
+      if (compact && (p.pen !== 'ink' || !COMPACT_WIDTHS.includes(p.width))) return;
+      const thick = p.width === Math.max(...COMPACT_WIDTHS);
+      const cap = compact ? (thick ? 'dick' : 'dünn') : formatWidth(p.width);
+      const title = compact ? `${thick ? 'Dick' : 'Dünn'} (${formatWidth(p.width)} mm)` : `${PEN_NAMES[p.pen]} ${formatWidth(p.width)} mm (⇧${i + 1})`;
       const b = item(title, '', () => this.selectPen(i), () => penFly, `chip ${p.pen}`);
-      b.append(this.penDot(p.pen, p.width), h('span', { class: 'cap', text: formatWidth(p.width) }));
-      this.penItems.push(b);
+      b.append(this.penDot(p.pen, p.width), h('span', { class: 'cap', text: cap }));
+      this.penItems.set(i, b);
       (p.pen === 'pencil' ? pencils : inks).append(b);
     });
     penFly.attach(this.penBtn, () => penFly.toggle(this.penBtn));
@@ -572,7 +579,8 @@ export class Palette {
 
   private selectPen(i: number): void {
     const p = ALL_PENS[i];
-    if (p) this.app.setStyle({ pen: p.pen, width: p.width });
+    if (!p || (this.app.compact && (p.pen !== 'ink' || !COMPACT_WIDTHS.includes(p.width)))) return;
+    this.app.setStyle({ pen: p.pen, width: p.width });
   }
 
   update(): void {
@@ -590,8 +598,9 @@ export class Palette {
     }
 
     this.penBtn.className = `chip pen-trigger ${style.pen}`;
-    this.penBtn.replaceChildren(this.penDot(style.pen, style.width), h('span', { class: 'cap', text: formatWidth(style.width) }));
-    ALL_PENS.forEach((p, i) => this.penItems[i].classList.toggle('active', p.pen === style.pen && p.width === style.width));
+    const penCap = this.app.compact ? (style.width >= Math.max(...COMPACT_WIDTHS) ? 'dick' : 'dünn') : formatWidth(style.width);
+    this.penBtn.replaceChildren(this.penDot(style.pen, style.width), h('span', { class: 'cap', text: penCap }));
+    for (const [i, b] of this.penItems) b.classList.toggle('active', ALL_PENS[i].pen === style.pen && ALL_PENS[i].width === style.width);
     for (const [hd, b] of this.hardItems) b.classList.toggle('active', style.pen === 'pencil' && (style.hardness ?? 'HB') === hd);
     this.lineBtn.innerHTML = lineTypeIcon(LINE_DASH[style.lineType]);
     for (const [id, b] of this.lineItems) b.classList.toggle('active', id === style.lineType);

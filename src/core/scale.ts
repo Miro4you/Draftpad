@@ -21,6 +21,11 @@ export function scaleGeneration(): number {
   return generation;
 }
 
+/** Mark all cached sizes and layouts stale (e.g. when label texts change). */
+export function invalidateLayouts(): void {
+  generation++;
+}
+
 export function setDrawingScale(v: number): void {
   if (!(v > 0) || v === k) return;
   k = v;
