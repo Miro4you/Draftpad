@@ -582,6 +582,14 @@ function validEntity(e: Entity | null | undefined): e is Entity {
       return isVec(e.at) && typeof e.text === 'string' && isNum(e.size) && e.size > 0 && isNum(e.angle);
     case 'sheet':
       return isVec(e.at) && SHEET_FORMATS.includes(e.format) && isNum(e.scale) && e.scale > 0 && !!e.fields;
+    case 'support':
+      return isVec(e.at) && isNum(e.angle) && ['fixed', 'roller', 'clamp', 'hinge'].includes(e.type);
+    case 'force':
+      return isVec(e.at) && isVec(e.p) && typeof e.label === 'string';
+    case 'moment':
+      return isVec(e.c) && isNum(e.r) && e.r > 0 && isNum(e.start) && isNum(e.sweep) && e.sweep !== 0 && typeof e.label === 'string';
+    case 'lineload':
+      return isVec(e.a) && isVec(e.b) && isNum(e.h) && typeof e.label === 'string';
     default:
       return false;
   }

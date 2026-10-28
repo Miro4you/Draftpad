@@ -154,6 +154,60 @@ export interface TextEntity extends EntityBase {
   angle: number;
 }
 
+// ---- Technische Mechanik (Freikörperbild) -------------------------------------
+
+/** Festlager, Loslager, Einspannung, Gelenk. */
+export type SupportType = 'fixed' | 'roller' | 'clamp' | 'hinge';
+
+/**
+ * Support symbol at `at` on the part. `angle` (radians, world) points from the
+ * part towards the ground, i.e. "down" for a beam lying on its supports.
+ */
+export interface SupportEntity extends EntityBase {
+  kind: 'support';
+  type: SupportType;
+  at: Vec;
+  angle: number;
+}
+
+/**
+ * Point load: arrow from the tail `p` with its tip at the point of application `at`.
+ * `label` like "F_1" or "F_1 = 500 N" (an underscore starts a subscript).
+ */
+export interface ForceEntity extends EntityBase {
+  kind: 'force';
+  at: Vec;
+  p: Vec;
+  label: string;
+}
+
+/**
+ * Moment: curved arrow around `c` with radius `r`, running from `start` by `sweep`
+ * (radians, world; negative sweep = counter-clockwise on screen). Arrowhead at the end.
+ */
+export interface MomentEntity extends EntityBase {
+  kind: 'moment';
+  c: Vec;
+  r: number;
+  start: number;
+  sweep: number;
+  label: string;
+}
+
+/**
+ * Line load (Streckenlast) acting on the feature from `a` to `b`: a row of arrows
+ * whose tails sit `h` mm away (signed, along the left normal of a→b).
+ */
+export interface LineLoadEntity extends EntityBase {
+  kind: 'lineload';
+  a: Vec;
+  b: Vec;
+  h: number;
+  label: string;
+}
+
+export type MechEntity = SupportEntity | ForceEntity | MomentEntity | LineLoadEntity;
+
 export type SheetFormat = 'A4' | 'A3' | 'A2' | 'A1' | 'A0';
 
 export interface TitleFields {
@@ -189,16 +243,22 @@ export type Entity =
   | DatumEntity
   | GtolEntity
   | TextEntity
-  | SheetEntity;
+  | SheetEntity
+  | MechEntity;
 
 /** Annotations don't take part in trimming, erasing or geometric snapping. */
-export type Annotation = HatchEntity | DimEntity | DatumEntity | GtolEntity | TextEntity | SheetEntity;
+export type Annotation = HatchEntity | DimEntity | DatumEntity | GtolEntity | TextEntity | SheetEntity | MechEntity;
 
 /** Annotations drawn from a layout of lines, fills and texts (all but hatches). */
 export type LaidOut = Exclude<Annotation, HatchEntity>;
 
 export function isAnnotation(e: Entity): e is Annotation {
-  return e.kind === 'hatch' || e.kind === 'dim' || e.kind === 'datum' || e.kind === 'gtol' || e.kind === 'text' || e.kind === 'sheet';
+  return e.kind === 'hatch' || e.kind === 'dim' || e.kind === 'datum' || e.kind === 'gtol' || e.kind === 'text' || e.kind === 'sheet' || isMech(e);
+}
+
+/** Supports, forces, moments and line loads (free-body diagram symbols). */
+export function isMech(e: Entity): e is MechEntity {
+  return e.kind === 'support' || e.kind === 'force' || e.kind === 'moment' || e.kind === 'lineload';
 }
 
 export interface Layer {

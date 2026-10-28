@@ -362,6 +362,7 @@ export function helpDialog(): HTMLDialogElement {
     ['H', 'Schraffur: in eine geschlossene Fläche tippen (kleine Lücken werden überbrückt)'],
     ['D', 'Bemaßung: Punkt zu Punkt ziehen, dann Maßlinie platzieren · Linie/Kreis/Bogen antippen · zwei Linien = Winkel'],
     ['P', 'GPS: Bezug oder Toleranzrahmen – auf Element drücken und wegziehen'],
+    ['M', 'Technik: Festlager, Loslager, Einspannung, Gelenk, Einzelkraft, Moment, Streckenlast – rasten an der Geometrie ein'],
     ['Bogen', 'Am Startpunkt in die Startrichtung losziehen: auf Linien, Bögen und Kreisen tangential (vor- oder rückwärts), sonst in Zugrichtung; zurück zum Start = neu wählen'],
     ['Auswahl: antippen / Schlinge', 'Objekte hinzufügen oder entfernen / einkreisen'],
     ['Auswahl ziehen · Drehknopf', 'Verschieben mit Fang · Drehen'],

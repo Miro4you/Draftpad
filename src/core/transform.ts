@@ -122,7 +122,16 @@ export function transformEntity<T extends Entity>(e: T, m: Affine, id: string = 
     }
     case 'datum':
     case 'gtol':
+    case 'force':
       return { ...e, id, at: applyAffine(m, e.at), p: applyAffine(m, e.p) };
+    case 'support':
+      return { ...e, id, at: applyAffine(m, e.at), angle: mapAngle(m, e.angle) };
+    case 'moment':
+      // Mirroring reverses the turning direction.
+      return { ...e, id, c: applyAffine(m, e.c), start: mapAngle(m, e.start), sweep: det(m) < 0 ? -e.sweep : e.sweep };
+    case 'lineload':
+      // The load stays on the same side of the feature when mirrored.
+      return { ...e, id, a: applyAffine(m, e.a), b: applyAffine(m, e.b), h: det(m) < 0 ? -e.h : e.h };
     case 'text': {
       let angle = mapAngle(m, e.angle);
       let at = applyAffine(m, e.at);

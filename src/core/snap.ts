@@ -195,7 +195,14 @@ export function keyPoints(e: Entity): Vec[] {
       return [e.p1, e.p2];
     case 'datum':
     case 'gtol':
+    case 'force':
       return [e.at, e.p];
+    case 'support':
+      return [e.at];
+    case 'moment':
+      return [e.c];
+    case 'lineload':
+      return [e.a, e.b];
     case 'text':
       return [e.at];
     case 'hatch':

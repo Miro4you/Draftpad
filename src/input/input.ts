@@ -498,6 +498,9 @@ export class InputController {
       case 'p':
         app.setTool('gps');
         break;
+      case 'm':
+        app.setTool('mech');
+        break;
       case 's':
         app.updateSettings({ snap: !app.settings.snap });
         app.toast(app.settings.snap ? 'Fang an' : 'Fang aus');

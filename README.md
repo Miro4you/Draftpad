@@ -65,9 +65,18 @@ Das vollständige Konzept und der Phasenplan stehen in [CONCEPT.md](CONCEPT.md).
 - Linienlängen, Radien und Rechteckseiten rasten in 0,5-mm-Schritten (Winkel-Menü: frei / 0,1 / 0,5 / 1 mm); Shift halten oder einen Finger auflegen zeichnet frei – Fangpunkte gehen immer vor
 - Neues App-Icon – auf dem iPad das Home-Bildschirm-Symbol einmal entfernen und neu hinzufügen, damit es erscheint
 
+**Technik (Taste M, Freikörperbild)**
+
+- Festlager, Loslager, Einspannung, Gelenk: auf den Punkt tippen (Lager zeigen nach unten) oder drücken und Richtung Boden ziehen (15°-Schritte); eine Einspannung auf einem Linienende setzt die Linie in die Wand fort
+- Einzelkraft: auf den Angriffspunkt drücken und zum Pfeilende ziehen – die Spitze bleibt am Punkt, Winkel und Länge rasten wie bei Linien; Tippen = Kraft von oben
+- Moment: auf den Punkt drücken und wegziehen (Radius und Pfeilanfang), Drehsinn im Gruppenmenü; Spiegeln dreht ihn um
+- Streckenlast: vom Anfang bis zum Ende der Last ziehen; die Pfeile kommen von oben, die Höhe lässt sich mit dem Griff ändern
+- Beschriftungen werden automatisch nummeriert (F₁, M₁, q₁ …); doppelt antippen zum Ändern, z. B. „F_1 = 500 N“ – der Unterstrich setzt den Index
+- Alles rastet an Endpunkten, Mitten und auf Linien ein, lässt sich auswählen, verschieben, drehen, spiegeln und exportieren
+
 **Werkzeugleiste (neu sortiert)**
 
-Auswahl · Linie · Formen (Kreis, Rechteck, Bogen, Bogen um Mittelpunkt, Achsenkreuz, Freihand) · Schraffur · Beschriften (Maß, Bezug, Toleranzrahmen, Text) · Löschen (Objekt, Trimmen, Radierer) · Sonderwerkzeuge (Verrunden, Nachzeichnen). Optionen eines Werkzeugs (Glättung, Schrifthöhe, Radius, Schraffurmuster) erscheinen im Gruppenmenü, solange es aktiv ist.
+Auswahl · Linie · Formen (Kreis, Rechteck, Bogen, Bogen um Mittelpunkt, Achsenkreuz, Freihand) · Schraffur · Beschriften (Maß, Bezug, Toleranzrahmen, Text) · Technik (Lager, Kraft, Moment, Streckenlast) · Löschen (Objekt, Trimmen, Radierer) · Sonderwerkzeuge (Verrunden, Nachzeichnen). Optionen eines Werkzeugs (Glättung, Schrifthöhe, Radius, Schraffurmuster) erscheinen im Gruppenmenü, solange es aktiv ist.
 
 **Normteile (Taste I, Gruppe Sonderwerkzeuge)**
 
@@ -92,7 +101,7 @@ In der Online-Ablage bei einer Zeichnung „Live“ wählen – auf jedem Gerät
 | V · F · L · C · B | Auswahl · Freihand · Linie · Kreis · Bogen |
 | K | Achsenkreuz |
 | X · T · E | Objekt löschen · Trimmen · Radierer |
-| H · D · P | Schraffur · Bemaßung · GPS-Symbol |
+| H · D · P · M | Schraffur · Bemaßung · GPS-Symbol · Technik (Lager, Kräfte) |
 | Q · U · W · N · I | Rechteck · Ecken verrunden · Text · Nachzeichnen · Normteil |
 | Entf · ⌘D · ⌘A · Pfeile | Auswahl löschen · duplizieren · alles wählen · verschieben |
 | 1–4 | Linienart (Voll, Strich, Strich-Punkt, Strich-Zweipunkt) |

@@ -1,6 +1,6 @@
 import { dist, type Vec } from './geom';
 import { drawingScale, scaleGeneration } from './scale';
-import type { Annotation, DatumEntity, DimEntity, GpsSymbol, GtolEntity, LaidOut, SheetEntity, SheetFormat, TextEntity } from './types';
+import type { Annotation, DatumEntity, DimEntity, ForceEntity, GpsSymbol, GtolEntity, LaidOut, LineLoadEntity, MomentEntity, SheetEntity, SheetFormat, SupportEntity, TextEntity } from './types';
 
 /**
  * Layout of annotations as plain geometry (world mm): thin lines and arcs, filled
@@ -540,10 +540,184 @@ export function layoutAnno(e: LaidOut): AnnoLayout {
       case 'sheet':
         l = layoutSheet(e);
         break;
+      case 'support':
+        l = layoutSupport(e);
+        break;
+      case 'force':
+        l = layoutForce(e);
+        break;
+      case 'moment':
+        l = layoutMoment(e);
+        break;
+      case 'lineload':
+        l = layoutLineLoad(e);
+        break;
     }
     layoutCache.set(e, { g, l });
   }
   return l;
+}
+
+// ---- Technische Mechanik ---------------------------------------------------------------------
+
+/** Paper sizes (mm at 1:1) of the free-body symbols. */
+const MECH = { TRI_H: 7, TRI_HALF: 4.2, GROUND: 8, HATCH: 2, HATCH_GAP: 2, ROLLER_GAP: 1.6, PIN: 1, HINGE: 1.5, CLAMP: 10, HEAD_L: 3.5, HEAD_HALF: 0.85, LOAD_STEP: 6 };
+const SUB_SCALE = 0.7;
+
+/**
+ * Display text of a label: "F_1 = 500 N" → main "F", subscript "1", rest " = 500 N".
+ * The subscript runs up to the next space or "=".
+ */
+export function splitLabel(label: string): { main: string; sub: string; rest: string } {
+  const m = /^([^_\s=]+)_([^\s=]+)(.*)$/s.exec(label);
+  return m ? { main: m[1], sub: m[2], rest: m[3] } : { main: label, sub: '', rest: '' };
+}
+
+/** Width of a label including its smaller subscript. */
+export function labelWidth(label: string, size = TEXT_H): number {
+  const { main, sub, rest } = splitLabel(label);
+  return textWidth(main, size) + textWidth(sub, size * SUB_SCALE) + textWidth(rest, size);
+}
+
+/**
+ * Label (with subscript) centred on `c` (paper-horizontal). `away` pushes the
+ * label box off `c` in that direction so it does not cover the symbol.
+ */
+function pushLabel(L: AnnoLayout, label: string, c: Vec, away: Vec = { x: 0, y: 0 }): void {
+  if (!label.trim()) return;
+  const { main, sub, rest } = splitLabel(label);
+  const subH = TEXT_H * SUB_SCALE;
+  const w = labelWidth(label);
+  const u = unit(away);
+  // Move the box centre so its edge (not its centre) keeps the distance.
+  const reach = Math.abs(u.x) * (w / 2) + Math.abs(u.y) * (TEXT_H / 2);
+  const ctr = Math.hypot(away.x, away.y) > 0 ? add(c, u, reach) : c;
+  let x = ctr.x - w / 2;
+  const base = ctr.y + TEXT_H / 2;
+  const put = (text: string, size: number, dy: number) => {
+    if (!text) return;
+    const tw = textWidth(text, size);
+    L.texts.push({ p: { x: x + tw / 2, y: base + dy }, angle: 0, text, size, baseline: 'bottom' });
+    x += tw;
+  };
+  put(main, TEXT_H, 0);
+  put(sub, subH, subH * 0.35);
+  put(rest, TEXT_H, 0);
+}
+
+/** Filled arrowhead of a load arrow (bigger than a dimension arrow). */
+function loadHead(tip: Vec, dir: Vec, scale = 1): Vec[] {
+  const d = unit(dir);
+  const n = perp(d);
+  const base = add(tip, d, -MECH.HEAD_L * K * scale);
+  return [tip, add(base, n, MECH.HEAD_HALF * K * scale), add(base, n, -MECH.HEAD_HALF * K * scale)];
+}
+
+/** Ground line across `c` (perpendicular to `down`) with hatching on the far side. */
+function ground(L: AnnoLayout, c: Vec, down: Vec, half: number): void {
+  const t = perp(down);
+  const a = add(c, t, -half);
+  const b = add(c, t, half);
+  L.lines.push([a, b]);
+  const step = MECH.HATCH_GAP * K;
+  const n = Math.max(2, Math.floor((2 * half) / step));
+  const off = (2 * half - (n - 1) * step) / 2;
+  // 45° strokes leaning the same way on every support.
+  const slant = unit(add(down, t, -1));
+  for (let i = 0; i < n; i++) {
+    const q = add(a, t, off + i * step);
+    L.lines.push([q, add(q, slant, MECH.HATCH * K * Math.SQRT2)]);
+  }
+}
+
+function layoutSupport(e: SupportEntity): AnnoLayout {
+  const L: AnnoLayout = { lines: [], arcs: [], fills: [], texts: [] };
+  const down = { x: Math.cos(e.angle), y: Math.sin(e.angle) };
+  const t = perp(down);
+  if (e.type === 'hinge') {
+    L.arcs.push({ c: e.at, r: MECH.HINGE * K, start: 0, sweep: Math.PI * 2 });
+    return L;
+  }
+  if (e.type === 'clamp') {
+    ground(L, e.at, down, (MECH.CLAMP * K) / 2);
+    return L;
+  }
+  // Triangle hanging from a small pin at `at`.
+  const pin = MECH.PIN * K;
+  const h = MECH.TRI_H * K;
+  const half = MECH.TRI_HALF * K;
+  const baseC = add(e.at, down, h);
+  const bl = add(baseC, t, -half);
+  const br = add(baseC, t, half);
+  // Legs start on the pin circle.
+  const legStart = (q: Vec) => add(e.at, unit({ x: q.x - e.at.x, y: q.y - e.at.y }), pin);
+  L.arcs.push({ c: e.at, r: pin, start: 0, sweep: Math.PI * 2 });
+  L.lines.push([legStart(bl), bl], [legStart(br), br]);
+  if (e.type === 'fixed') {
+    ground(L, baseC, down, (MECH.GROUND * K) / 2);
+  } else {
+    L.lines.push([bl, br]);
+    ground(L, add(baseC, down, MECH.ROLLER_GAP * K), down, (MECH.GROUND * K) / 2);
+  }
+  return L;
+}
+
+function layoutForce(e: ForceEntity): AnnoLayout {
+  const L: AnnoLayout = { lines: [], arcs: [], fills: [], texts: [] };
+  const d = { x: e.at.x - e.p.x, y: e.at.y - e.p.y };
+  const len = Math.hypot(d.x, d.y);
+  if (len < 1e-6) return L;
+  const head = loadHead(e.at, d);
+  // Shaft ends at the arrowhead base so the tip stays sharp.
+  L.lines.push([e.p, add(e.at, unit(d), -Math.min(len, MECH.HEAD_L * K) * 0.9)]);
+  L.fills.push(head);
+  // Label beside the tail, off the shaft.
+  const side = perp(unit(d));
+  const s = side.y > 0 || (Math.abs(side.y) < 1e-9 && side.x < 0) ? { x: -side.x, y: -side.y } : side;
+  pushLabel(L, e.label, add(e.p, s, TEXT_GAP * 1.5), add(s, unit(d), -0.6));
+  return L;
+}
+
+function layoutMoment(e: MomentEntity): AnnoLayout {
+  const L: AnnoLayout = { lines: [], arcs: [], fills: [], texts: [] };
+  const sign = Math.sign(e.sweep) || 1;
+  // Leave room for the arrowhead at the end of the arc.
+  const headAng = Math.min(Math.abs(e.sweep) * 0.5, (MECH.HEAD_L * K * 0.9) / Math.max(e.r, 1e-6));
+  L.arcs.push({ c: e.c, r: e.r, start: e.start, sweep: e.sweep - sign * headAng });
+  const endA = e.start + e.sweep;
+  const tip = add(e.c, { x: Math.cos(endA), y: Math.sin(endA) }, e.r);
+  // Tangent at the tip in the running direction.
+  const tan = { x: -Math.sin(endA) * sign, y: Math.cos(endA) * sign };
+  L.fills.push(loadHead(tip, tan));
+  L.arcs.push({ c: e.c, r: Math.max(0.35 * K, e.r * 0.06), start: 0, sweep: Math.PI * 2 });
+  // Label outside the arc at its tail (the end without arrowhead).
+  const out = { x: Math.cos(e.start), y: Math.sin(e.start) };
+  pushLabel(L, e.label, add(e.c, out, e.r + TEXT_GAP * 1.5), out);
+  return L;
+}
+
+function layoutLineLoad(e: LineLoadEntity): AnnoLayout {
+  const L: AnnoLayout = { lines: [], arcs: [], fills: [], texts: [] };
+  const ab = { x: e.b.x - e.a.x, y: e.b.y - e.a.y };
+  const len = Math.hypot(ab.x, ab.y);
+  if (len < 1e-6) return L;
+  const n = perp(unit(ab));
+  const ta = add(e.a, n, e.h);
+  const tb = add(e.b, n, e.h);
+  L.lines.push([ta, tb]);
+  const count = Math.max(2, Math.round(len / (MECH.LOAD_STEP * K)) + 1);
+  const down = { x: -n.x * Math.sign(e.h || 1), y: -n.y * Math.sign(e.h || 1) };
+  const headScale = Math.min(1, Math.abs(e.h) / (MECH.HEAD_L * K * 1.6)) * 0.8;
+  for (let i = 0; i < count; i++) {
+    const f = i / (count - 1);
+    const foot = add(e.a, ab, f);
+    const top = add(foot, n, e.h);
+    L.lines.push([top, add(foot, down, -MECH.HEAD_L * K * headScale * 0.9)]);
+    L.fills.push(loadHead(foot, down, headScale));
+  }
+  const out = { x: -down.x, y: -down.y };
+  pushLabel(L, e.label, add(add(ta, ab, 0.5), out, TEXT_GAP * 1.5), out);
+  return L;
 }
 
 // ---- text ------------------------------------------------------------------------------------

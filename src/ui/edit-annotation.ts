@@ -6,7 +6,7 @@ import { editSheet } from './sheet-dialog';
 
 /** Whether an entity has text that can be edited (dimension, datum, frame, text, sheet). */
 export function hasEditableText(e: Entity): boolean {
-  return e.kind === 'dim' || e.kind === 'datum' || e.kind === 'gtol' || e.kind === 'text' || e.kind === 'sheet';
+  return e.kind === 'dim' || e.kind === 'datum' || e.kind === 'gtol' || e.kind === 'text' || e.kind === 'sheet' || e.kind === 'force' || e.kind === 'moment' || e.kind === 'lineload';
 }
 
 /** Open the editor for the text of a dimension, datum, tolerance frame, text or sheet. */
@@ -25,6 +25,10 @@ export async function editAnnotation(app: App, e: Entity): Promise<void> {
     const v = await askText('Text bearbeiten', e.text, 'Übernehmen', undefined, false, true);
     if (!v) return;
     next = { ...e, text: v };
+  } else if (e.kind === 'force' || e.kind === 'moment' || e.kind === 'lineload') {
+    const v = await askText('Beschriftung', e.label, 'Übernehmen', 'z. B. „F_1 = 500 N“ – der Unterstrich setzt den Index. Leer = ohne Beschriftung.', true);
+    if (v === null) return;
+    next = { ...e, label: v };
   } else if (e.kind === 'sheet') {
     await editSheet(app);
     return;
@@ -48,6 +52,12 @@ function pick(cur: Entity): Partial<Entity> {
       return { at: cur.at, p: cur.p, layerId: cur.layerId, z: cur.z };
     case 'text':
       return { at: cur.at, angle: cur.angle, size: cur.size, layerId: cur.layerId, z: cur.z };
+    case 'force':
+      return { at: cur.at, p: cur.p, layerId: cur.layerId, z: cur.z };
+    case 'moment':
+      return { c: cur.c, r: cur.r, start: cur.start, sweep: cur.sweep, layerId: cur.layerId, z: cur.z };
+    case 'lineload':
+      return { a: cur.a, b: cur.b, h: cur.h, layerId: cur.layerId, z: cur.z };
     default:
       return {};
   }

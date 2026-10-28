@@ -6,7 +6,7 @@ import { boxExpand, boxesIntersect, boxUnion, drawingAngleDeg, dist, emptyBox, i
 import { DEFAULT_STYLE, PAPER_COLORS, penColor, setPenTheme, type Theme } from './core/pens';
 import { findSnap, snapAngle, snapCandidates, softSnapAngle, type AngleMode, type SnapHit } from './core/snap';
 import { mirrorGroup, transformEntity, type Affine } from './core/transform';
-import { isAnnotation, type Entity, type HatchPattern, type LineEntity, type Style } from './core/types';
+import { isAnnotation, isMech, type Entity, type HatchPattern, type LineEntity, type Style } from './core/types';
 import { ACCENT, drawCursorDot, drawMirrorToggle, drawSnapMarker, formatAngle, formatLength } from './render/overlay';
 import { Painter } from './render/painter';
 import { SceneRenderer } from './render/scene';
@@ -25,6 +25,7 @@ import { PartTool } from './tools/part';
 import type { PartSpec } from './core/parts';
 import type { LiveSession } from './storage/live';
 import { GpsTool } from './tools/gps';
+import { MechTool, type MechMode } from './tools/mech';
 import { FreehandTool } from './tools/freehand';
 import { HATCH_GAPS, HatchTool, isBoundary, refitHatch } from './tools/hatch';
 import { LineTool } from './tools/line';
@@ -49,7 +50,8 @@ export type ToolId =
   | 'dim'
   | 'gps'
   | 'text'
-  | 'part';
+  | 'part'
+  | 'mech';
 
 export interface Settings {
   grid: boolean;
@@ -86,6 +88,10 @@ export interface Settings {
   lengthStep: number;
   /** Standard part placed by the parts tool. */
   part: PartSpec;
+  /** Free-body symbol placed by the mechanics tool. */
+  mechMode: MechMode;
+  /** New moments turn counter-clockwise (mathematically positive). */
+  momentCcw: boolean;
 }
 
 /** With the angle snap off, lines still settle onto 0°/45°/90°… when this close (degrees). */
@@ -120,6 +126,8 @@ const DEFAULT_SETTINGS: Settings = {
   textSize: 3.5,
   lengthStep: 0.5,
   part: { kind: 'socketScrew', size: 'M8', view: 'side', length: 30 },
+  mechMode: 'force',
+  momentCcw: true,
 };
 
 /**
@@ -128,7 +136,7 @@ const DEFAULT_SETTINGS: Settings = {
  */
 function mirrorable(e: Entity): boolean {
   if (e.kind === 'line' && e.axis) return false;
-  return e.kind !== 'dim' && e.kind !== 'datum' && e.kind !== 'gtol' && e.kind !== 'text' && e.kind !== 'sheet';
+  return e.kind !== 'dim' && e.kind !== 'datum' && e.kind !== 'gtol' && e.kind !== 'text' && e.kind !== 'sheet' && !isMech(e);
 }
 
 interface Widget {
@@ -207,6 +215,7 @@ export class App {
       trace: new TraceTool(this),
       part: new PartTool(this),
       text: new TextTool(this),
+      mech: new MechTool(this),
     };
     this.doc.beforeCommit = (changes) => {
       this.autoScale(changes);

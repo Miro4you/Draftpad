@@ -32,8 +32,8 @@ Gesammelte Rückmeldungen vom iPad-Test und ihr Stand.
 | 25 | Zeitraffer: ganzer Prozess inkl. Löschen und Trimmen | ✓ Ablauf wird ab jetzt in der Zeichnung mitgeschrieben; Auswahl „Ganzer Ablauf“ / „Nur Ergebnis“ |
 | 26 | Zeitraffer: Auflösung wählbar, nur ein Ausschnitt | ✓ 720p–4K; Alles / Ansicht / Auswahl / Blatt |
 | 27 | Aufnehmen-Button in der oberen Leiste | ✓ Kamera-Taste oben rechts; im Dialog stehen Aufnehmen/Vorschau oben |
-| 28 | Kraftpfeile: Einzelkraft mit Beschriftung (z. B. F₁ = 500 N), Spitze am Angriffspunkt, Winkel fest oder frei | offen – gesammelt |
-| 29 | Momentpfeil (gebogen um einen Punkt, z. B. M = 20 Nm) | offen – gesammelt |
-| 30 | Streckenlast (Pfeilreihe entlang einer Linie, z. B. q = 2 kN/m) | offen – gesammelt |
-| 31 | Lagersymbole: Festlager, Loslager, Einspannung (Freikörperbild) | offen – gesammelt |
+| 28 | Kraftpfeile: Einzelkraft mit Beschriftung (z. B. F₁ = 500 N), Spitze am Angriffspunkt, Winkel fest oder frei | ✓ Gruppe „Technik“ (M); Winkel über den Winkelfang |
+| 29 | Momentpfeil (gebogen um einen Punkt, z. B. M = 20 Nm) | ✓ Drehsinn im Gruppenmenü, Spiegeln dreht ihn um |
+| 30 | Streckenlast (Pfeilreihe entlang einer Linie, z. B. q = 2 kN/m) | ✓ von Anfang bis Ende ziehen, Höhe über den Griff |
+| 31 | Lagersymbole: Festlager, Loslager, Einspannung (Freikörperbild) | ✓ plus Gelenk; Einspannung am Linienende zeigt in Linienrichtung |
 | 32 | Video: erster Frame = Endergebnis (sonst weiße Vorschaubilder) | ✓ 0,7 s Ergebnis, dann Überblendung zum leeren Blatt |

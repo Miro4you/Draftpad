@@ -5,6 +5,7 @@ import { HATCH_NAMES } from '../render/annotations';
 import { HATCH_GAPS } from '../tools/hatch';
 import { PART_ANGLES, partLabel } from '../core/parts';
 import { askPart } from './part-dialog';
+import type { MechMode } from '../tools/mech';
 import { loadPref, savePref } from '../storage/idb';
 import { icons, lineTypeIcon } from './icons';
 import { h } from './dom';
@@ -113,6 +114,28 @@ const ANNOS: GroupItem[] = [
   gps('datum', 'Bezug (A, B, …): auf Kante drücken und wegziehen (P)', icons.datum),
   gps('gtol', 'Form- und Lagetoleranz: auf Element drücken und Rahmen wegziehen (P)', icons.gtol),
   tool('text', 'Text: Startpunkt antippen, vorhandenen Text antippen zum Ändern (W)', icons.text),
+];
+
+const mech = (mode: MechMode, title: string, icon: string): GroupItem => ({
+  id: `mech-${mode}`,
+  title,
+  icon,
+  pick: (app) => {
+    app.updateSettings({ mechMode: mode });
+    app.setTool('mech');
+  },
+  active: (app) => app.toolId === 'mech' && app.settings.mechMode === mode,
+});
+
+/** Free-body diagram: supports and loads (M). */
+const MECHS: GroupItem[] = [
+  mech('fixed', 'Festlager: auf den Punkt tippen, oder drücken und Richtung Boden ziehen (M)', icons.supportFixed),
+  mech('roller', 'Loslager: auf den Punkt tippen, oder drücken und Richtung Boden ziehen (M)', icons.supportRoller),
+  mech('clamp', 'Einspannung: auf das Balkenende tippen und in die Wand ziehen (M)', icons.supportClamp),
+  mech('hinge', 'Gelenk: auf den Punkt tippen (M)', icons.supportHinge),
+  mech('force', 'Einzelkraft: auf den Angriffspunkt drücken und zum Pfeilende ziehen – die Spitze bleibt am Punkt (M)', icons.force),
+  mech('moment', 'Moment: auf den Punkt drücken und für Radius und Pfeilanfang wegziehen (M)', icons.moment),
+  mech('lineload', 'Streckenlast: vom Anfang bis zum Ende der Last ziehen (M)', icons.lineLoad),
 ];
 
 const ERASERS: GroupItem[] = [
@@ -225,6 +248,7 @@ export class Palette {
   private groups: ToolGroup[] = [];
   private radiusItems = new Map<number, HTMLButtonElement>();
   private textSizeItems = new Map<number, HTMLButtonElement>();
+  private momentItems = new Map<boolean, HTMLButtonElement>();
   private hatchItems = new Map<string, HTMLButtonElement>();
   private partLabel!: HTMLElement;
   private partAngleItems = new Map<number | null, HTMLButtonElement>();
@@ -331,6 +355,33 @@ export class Palette {
     const textOpts = h('div', { class: 'fly-section' }, [h('div', { class: 'fly-title', text: 'Schrifthöhe (mm)' }), sizeRow]);
     const annos = new ToolGroup(app, 'annos', 'Beschriften: Bemaßung, Bezug, Toleranzrahmen, Text', ANNOS, [{ el: textOpts, when: (a) => a.toolId === 'text' }], side);
 
+    // Free-body diagram (turning direction while placing moments).
+    const momentRow = h('div', { class: 'seg seg-icons' });
+    for (const [ccw, title, icon] of [
+      [true, 'Gegen den Uhrzeigersinn', icons.moment],
+      [false, 'Im Uhrzeigersinn', icons.momentCw],
+    ] as const) {
+      const b = h('button', { class: 'seg-btn', title, 'aria-label': title, html: icon, 'data-item': '1' });
+      b.addEventListener('click', () => app.updateSettings({ momentCcw: ccw }));
+      this.momentItems.set(ccw, b);
+      momentRow.append(b);
+    }
+    const momentOpts = h('div', { class: 'fly-section' }, [h('div', { class: 'fly-title', text: 'Drehsinn' }), momentRow]);
+    const mechHint = h('div', { class: 'fly-section' }, [
+      h('div', { class: 'fly-hint', text: 'Beschriftung (F₁, M₁, q₁ …) doppelt antippen zum Ändern, z. B. „F_1 = 500 N“ – der Unterstrich setzt den Index.' }),
+    ]);
+    const mechs = new ToolGroup(
+      app,
+      'mech',
+      'Technik: Lager, Kräfte, Momente, Streckenlast (M)',
+      MECHS,
+      [
+        { el: momentOpts, when: (a) => a.toolId === 'mech' && a.settings.mechMode === 'moment' },
+        { el: mechHint, when: (a) => a.toolId === 'mech' && ['force', 'moment', 'lineload'].includes(a.settings.mechMode) },
+      ],
+      side,
+    );
+
     // Erasing.
     const erasers = new ToolGroup(app, 'erasers', 'Löschen: Objekt, Trimmen, Radierer', ERASERS, [], side);
 
@@ -376,7 +427,7 @@ export class Palette {
       ],
       side,
     );
-    this.groups = [shapes, hatch, annos, erasers, specials];
+    this.groups = [shapes, hatch, annos, mechs, erasers, specials];
 
     // Pens.
     this.penBtn = h('button', { class: 'chip pen-trigger', title: 'Stift wählen (⇧1–9)', 'aria-label': 'Stift' });
@@ -530,6 +581,7 @@ export class Palette {
     this.drawLineBtn.classList.toggle('active', toolId === 'line');
     for (const g of this.groups) g.update();
     for (const [sz, b] of this.textSizeItems) b.classList.toggle('active', sz === settings.textSize);
+    for (const [ccw, b] of this.momentItems) b.classList.toggle('active', ccw === settings.momentCcw);
     for (const [r, b] of this.radiusItems) b.classList.toggle('active', r === settings.filletRadius);
     this.partLabel.textContent = partLabel(settings.part);
     for (const [a, b] of this.partAngleItems) b.classList.toggle('active', a === (settings.part.angle ?? null));

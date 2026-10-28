@@ -2,6 +2,7 @@ import type { App } from '../app';
 import { dimTextAnchor, dragDimText } from '../core/annotations';
 import { arcEnds, arcPoint } from '../core/curves';
 import { dist, normAngle, type Vec } from '../core/geom';
+import { drawingScale } from '../core/scale';
 import type { SnapHit } from '../core/snap';
 import type { Entity } from '../core/types';
 import { drawGrip, drawKnob, drawMeasureLabel, drawPill, drawSnapMarker, type KnobKind } from '../render/overlay';
@@ -110,6 +111,64 @@ export function gripsFor(app: App, e: Entity, style: GripStyle): Grip[] {
         );
       }
       return grips;
+    }
+    case 'force':
+      return [
+        { key: 'at', anchor: e.at, offset: { x: 0, y: 0 }, kind: 'end', apply: (t) => ({ ...e, at: t }) },
+        { key: 'p', anchor: e.p, offset: { x: 0, y: 0 }, kind: 'end', angleFrom: e.at, apply: (t) => (dist(t, e.at) > 1e-6 ? { ...e, p: t } : e) },
+      ];
+    case 'lineload': {
+      const ab = { x: e.b.x - e.a.x, y: e.b.y - e.a.y };
+      const n = unit({ x: -ab.y, y: ab.x });
+      const top = { x: (e.a.x + e.b.x) / 2 + n.x * e.h, y: (e.a.y + e.b.y) / 2 + n.y * e.h };
+      return [
+        { key: 'a', anchor: e.a, offset: { x: 0, y: 0 }, kind: 'end', angleFrom: e.b, apply: (t) => ({ ...e, a: t }) },
+        { key: 'b', anchor: e.b, offset: { x: 0, y: 0 }, kind: 'end', angleFrom: e.a, apply: (t) => ({ ...e, b: t }) },
+        {
+          key: 'h',
+          anchor: top,
+          offset: { x: 0, y: 0 },
+          kind: 'radius',
+          free: true,
+          apply: (t) => {
+            const h = (t.x - (e.a.x + e.b.x) / 2) * n.x + (t.y - (e.a.y + e.b.y) / 2) * n.y;
+            return Math.abs(h) > 1e-3 ? { ...e, h } : e;
+          },
+        },
+      ];
+    }
+    case 'moment': {
+      const s = { x: e.c.x + Math.cos(e.start) * e.r, y: e.c.y + Math.sin(e.start) * e.r };
+      return [
+        { key: 'c', anchor: e.c, offset: { x: 0, y: 0 }, kind: 'move', apply: (t) => ({ ...e, c: t }) },
+        {
+          key: 'r',
+          anchor: s,
+          offset: { x: 0, y: 0 },
+          kind: 'radius',
+          free: true,
+          apply: (t) => (dist(t, e.c) > 1e-3 ? { ...e, r: dist(t, e.c), start: Math.atan2(t.y - e.c.y, t.x - e.c.x) } : e),
+        },
+      ];
+    }
+    case 'support': {
+      const reach = 9.5 * drawingScale();
+      const g = { x: e.at.x + Math.cos(e.angle) * reach, y: e.at.y + Math.sin(e.angle) * reach };
+      return [
+        { key: 'at', anchor: e.at, offset: { x: 0, y: 0 }, kind: 'move', apply: (t) => ({ ...e, at: t }) },
+        {
+          key: 'dir',
+          anchor: g,
+          offset: { x: 0, y: 0 },
+          kind: 'radius',
+          free: true,
+          apply: (t) => {
+            if (dist(t, e.at) < 1e-6) return e;
+            const step = Math.PI / 12;
+            return { ...e, angle: Math.round(Math.atan2(t.y - e.at.y, t.x - e.at.x) / step) * step };
+          },
+        },
+      ];
     }
     default:
       return [];
