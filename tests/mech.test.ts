@@ -102,6 +102,9 @@ describe('label resolver', () => {
       const dim = { ...base, id: 'd', kind: 'dim' as const, type: 'lin' as const, p1: { x: 0, y: 0 }, p2: { x: 40, y: 0 }, dir: 0, off: 10, text: 'l' };
       expect(layoutAnno(dim).texts.map((t) => t.text)).toEqual(['l = 2 m']);
       expect(layoutAnno({ ...dim, id: 'd2', text: undefined }).texts.map((t) => t.text)).toEqual(['40']);
+      const txt = { ...base, id: 't', kind: 'text' as const, at: { x: 0, y: 0 }, text: 'l', size: 3.5, angle: 0 };
+      expect(layoutAnno(txt).texts.map((t) => t.text)).toEqual(['l = 2 m']);
+      expect(layoutAnno({ ...txt, id: 't2', text: 'l\nzwei' }).texts.map((t) => t.text)).toEqual(['l', 'zwei']);
     } finally {
       setLabelResolver(null);
     }

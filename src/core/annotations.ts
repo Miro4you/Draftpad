@@ -568,7 +568,8 @@ const SUB_SCALE = 0.7;
 /**
  * Turns the stored label into the shown text – a host (e.g. MathPad) can show
  * "F_1 = 500 N" for a label "F_1" from its own variables. Applies to labels of
- * forces, moments and line loads and to typed dimension texts. Default: as stored.
+ * forces, moments and line loads, typed dimension texts and one-line texts.
+ * Default: as stored.
  */
 let labelResolver: ((label: string) => string) | null = null;
 
@@ -754,7 +755,9 @@ function layoutText(e: TextEntity): AnnoLayout {
   const size = e.size * K;
   const r = { x: Math.cos(e.angle), y: Math.sin(e.angle) };
   const below = { x: -r.y, y: r.x };
-  e.text.split('\n').forEach((line, i) => {
+  // A one-line text can stand for a host value too ("A" → "A = 12 kN").
+  const text = e.text.includes('\n') ? e.text : shownLabel(e.text);
+  text.split('\n').forEach((line, i) => {
     if (!line) return;
     const w = textWidth(line, size);
     const start = add(e.at, below, i * size * LINE_SPACING);
