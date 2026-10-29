@@ -1199,7 +1199,8 @@ dialog.gtol-dlg .dlg-actions {
 }
 
 .flyout.fly-wide:has(.fly-tools) {
-  width: 272px;
+  /* At least as wide as the icon row: n buttons + gaps + padding. */
+  width: max(272px, calc(var(--items, 1) * (var(--btn) + 2px) + 24px));
 }
 
 .fly-tools {

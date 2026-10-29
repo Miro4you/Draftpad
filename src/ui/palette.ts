@@ -202,6 +202,8 @@ class ToolGroup {
     }
     for (const o of options) content.push(o.el);
     this.fly = new Flyout(content, side, options.length ? 'fly-wide' : 'fly-row');
+    // Wide flyouts grow with the number of tools so the icon row always fits.
+    this.fly.el.style.setProperty('--items', String(list.length));
     this.fly.attach(this.btn, () => {
       if (this.activeItem()) this.fly.toggle(this.btn);
       else this.pick(this.list.find((i) => i.id === this.last) ?? this.list[0]);
