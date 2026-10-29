@@ -131,10 +131,13 @@ npm run preview    # Build lokal ansehen
 ### Auf dem Raspberry Pi betreiben (mit Online-Ablage)
 
 ```bash
-git pull
+git clone https://github.com/Miro4you/draftpad.git   # einmalig, danach: git pull
+cd draftpad
 npm install
 npm start          # baut die App und startet den Server auf Port 8080
 ```
+
+Umzug vom alten Ort (Branch im Profil-Repo `Miro4you`): den Ordner `data/` mit den gespeicherten Zeichnungen in den neuen Checkout kopieren und im systemd-Dienst `WorkingDirectory` anpassen.
 
 Dann auf dem iPad `http://<IP-des-Pi>:8080` öffnen und zum Home-Bildschirm hinzufügen. Der Server (`server/server.mjs`, nur Node.js, keine weiteren Pakete) liefert die App aus und legt Zeichnungen als JSON-Dateien in `data/` ab. Einstellungen über Umgebungsvariablen:
 
@@ -152,7 +155,7 @@ Description=Draftpad
 After=network.target
 
 [Service]
-WorkingDirectory=/home/pi/Miro4you
+WorkingDirectory=/home/pi/draftpad
 ExecStart=/usr/bin/node server/server.mjs
 Environment=PORT=8080
 Restart=always
