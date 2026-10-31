@@ -78,8 +78,12 @@ export class ViewBar {
     });
     this.liveBtn = h('button', { class: 'btn wide live-badge', title: 'Live-Bearbeitung (Online-Ablage)' });
     this.liveBtn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('app:cloud')));
-    // The compact tool set (inside a host app) has no layers and no timelapse.
-    const items = app.compact ? [this.compass, this.zoom, this.scaleBtn, menuBtn] : [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, recordBtn, menuBtn];
+    // The compact tool set (inside a host app) has no layers; embedded there is no timelapse.
+    const items = app.compact
+      ? [this.compass, this.zoom, this.scaleBtn, menuBtn]
+      : app.embedded
+        ? [this.compass, this.zoom, this.scaleBtn, this.layerBtn, menuBtn]
+        : [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, recordBtn, menuBtn];
     if (done) {
       const doneBtn = h('button', { class: 'btn done-btn', text: done.label, title: `${done.label} – zurück` });
       doneBtn.addEventListener('click', () => {
@@ -273,7 +277,18 @@ export class Menu {
 
   constructor(
     private app: App,
-    actions: { newDrawing: () => void; open: () => void; download: () => void; exportFile: () => void; timelapse: () => void; sheet: () => void; cloud: () => void; help: () => void },
+    actions: {
+      newDrawing: () => void;
+      open: () => void;
+      download: () => void;
+      exportFile: () => void;
+      timelapse: () => void;
+      sheet: () => void;
+      cloud: () => void;
+      help: () => void;
+      /** Embedded only: switch between compact and full tool set. */
+      toggleCompact?: () => void;
+    },
   ) {
     const item = (label: string, fn: () => void, hint = '') => {
       const b = h('button', { class: 'menu-item', role: 'menuitem' }, [h('span', { text: label }), h('kbd', { text: hint })]);
@@ -301,23 +316,42 @@ export class Menu {
       themeRow.append(b);
     }
     this.themeRow = themeRow;
-    // Inside a host app the host keeps the drawing and sets the theme.
+    // Inside a host app the host keeps the drawing and sets the theme; timelapse
+    // and online storage need Draftpad's own storage. Draftpad files still go
+    // both ways, so a sketch can be finished in the standalone app and come back.
+    const switchItem = actions.toggleCompact
+      ? [h('div', { class: 'menu-sep' }), item(app.compact ? 'Alle Draftpad-Werkzeuge' : 'Kompakte Werkzeuge', actions.toggleCompact)]
+      : [];
     const fileItems = app.compact
-      ? [item('Exportieren (PDF, SVG, PNG, JPEG) …', actions.exportFile, '⇧⌘E')]
-      : [
-          item('Neue Zeichnung', actions.newDrawing),
-          item('Datei öffnen …', actions.open, '⌘O'),
-          item('Datei herunterladen', actions.download, '⌘S'),
+      ? [
           item('Exportieren (PDF, SVG, PNG, JPEG) …', actions.exportFile, '⇧⌘E'),
-          item('Zeitraffer-Video …', actions.timelapse),
-          item('Online-Ablage …', actions.cloud),
-          item('Blatt & Schriftfeld …', actions.sheet),
-        ];
+          item('Als Draftpad-Datei herunterladen', actions.download, '⌘S'),
+          item('Draftpad-Datei öffnen …', actions.open, '⌘O'),
+          ...switchItem,
+        ]
+      : app.embedded
+        ? [
+            item('Neue Zeichnung', actions.newDrawing),
+            item('Datei öffnen …', actions.open, '⌘O'),
+            item('Datei herunterladen', actions.download, '⌘S'),
+            item('Exportieren (PDF, SVG, PNG, JPEG) …', actions.exportFile, '⇧⌘E'),
+            item('Blatt & Schriftfeld …', actions.sheet),
+            ...switchItem,
+          ]
+        : [
+            item('Neue Zeichnung', actions.newDrawing),
+            item('Datei öffnen …', actions.open, '⌘O'),
+            item('Datei herunterladen', actions.download, '⌘S'),
+            item('Exportieren (PDF, SVG, PNG, JPEG) …', actions.exportFile, '⇧⌘E'),
+            item('Zeitraffer-Video …', actions.timelapse),
+            item('Online-Ablage …', actions.cloud),
+            item('Blatt & Schriftfeld …', actions.sheet),
+          ];
     this.el.append(
       ...fileItems,
       h('div', { class: 'menu-sep' }),
       h('div', { class: 'menu-label', text: 'Darstellung' }),
-      ...(app.compact ? [] : [themeRow]),
+      ...(app.embedded ? [] : [themeRow]),
       toggle('grid', 'Raster'),
       toggle('handles', 'Korrekturgriffe nach dem Zeichnen'),
       toggle('centerMarks', 'Mittellinien bei neuen Kreisen'),

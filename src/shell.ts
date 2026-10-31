@@ -26,6 +26,11 @@ export interface EmbedOptions {
   onChange: (file: DocFile) => void;
   /** Shows a "done" button in the top bar. */
   onDone?: () => void;
+  /**
+   * Offers switching between the compact and the full tool set in the menu; the
+   * host restarts the editor with the other setting (the drawing stays).
+   */
+  onToggleCompact?: () => void;
   doneLabel?: string;
 }
 
@@ -39,6 +44,7 @@ export function startShell(root: HTMLElement, embed?: EmbedOptions): App {
   const app = new App(sceneCanvas, overlayCanvas);
   if (!embed) app.live = new LiveSession(app);
   else {
+    app.embedded = true;
     app.persist = embed.onChange;
     if (embed.compact) app.useCompactStyle();
   }
@@ -136,6 +142,7 @@ export function startShell(root: HTMLElement, embed?: EmbedOptions): App {
       sheet: () => void editSheet(app),
       cloud: () => void showCloudDialog(app),
       help: () => help.showModal(),
+      toggleCompact: embed?.onToggleCompact,
     },
   );
   const viewBar = new ViewBar(app, layers, menu, embed?.onDone ? { label: embed.doneLabel ?? 'Fertig', onClick: embed.onDone } : undefined);

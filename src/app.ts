@@ -255,6 +255,9 @@ export class App {
    */
   persist: ((file: DocFile) => void) | null = null;
 
+  /** Running inside a host app (see EmbedOptions): the host keeps the drawing. */
+  embedded = false;
+
   /** Reduced tool set for quick sketches inside a host app (see EmbedOptions.compact). */
   compact = false;
 

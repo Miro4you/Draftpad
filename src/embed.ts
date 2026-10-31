@@ -25,6 +25,11 @@ export interface DraftpadOptions {
   /** Shows a "done" button in the top bar. */
   onDone?: () => void;
   doneLabel?: string;
+  /**
+   * Menu item to switch between the compact and the full tool set. The host
+   * should flush, then start the editor again with `compact` flipped.
+   */
+  onToggleCompact?: () => void;
   /** Page and pen colours (default: as the system). */
   theme?: 'light' | 'dark' | 'system';
   /** Shown text for labels of forces, moments and line loads (e.g. "F_1" → "F_1 = 500 N"). */
@@ -49,6 +54,7 @@ export function mountDraftpad(root: HTMLElement, opts: DraftpadOptions): Draftpa
     onChange: opts.onChange,
     onDone: opts.onDone,
     doneLabel: opts.doneLabel,
+    onToggleCompact: opts.onToggleCompact,
   });
   if (opts.theme) app.updateSettings({ theme: opts.theme });
   return {
