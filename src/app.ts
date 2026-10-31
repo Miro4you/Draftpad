@@ -6,7 +6,7 @@ import { boxExpand, boxesIntersect, boxUnion, drawingAngleDeg, dist, emptyBox, i
 import { DEFAULT_STYLE, PAPER_COLORS, penColor, setPenTheme, type Theme } from './core/pens';
 import { findSnap, snapAngle, snapCandidates, softSnapAngle, type AngleMode, type SnapHit } from './core/snap';
 import { mirrorGroup, transformEntity, type Affine } from './core/transform';
-import { isAnnotation, isMech, type DocFile, type Entity, type HatchPattern, type LineEntity, type Style } from './core/types';
+import { isAnnotation, isMech, type DocFile, type Entity, type HatchPattern, type LineEntity, type Style, type ViewState } from './core/types';
 import { ACCENT, drawCursorDot, drawMirrorToggle, drawSnapMarker, formatAngle, formatLength } from './render/overlay';
 import { Painter } from './render/painter';
 import { SceneRenderer } from './render/scene';
@@ -281,16 +281,22 @@ export class App {
 
   /** Start embedded with the host's drawing (or an empty one). */
   loadEmbedded(data: unknown | null): void {
+    let view: ViewState | undefined;
     if (data) {
       try {
-        this.doc.loadFile(data);
+        view = this.doc.loadFile(data).view;
       } catch (err) {
         console.warn('Zeichnung konnte nicht geladen werden', err);
         this.doc.reset();
       }
     }
     this.loaded = true;
-    if (this.doc.size > 0) this.fitAll();
+    // The saved view keeps the place (e.g. after switching the tool set) as long as
+    // the drawing is on screen in it (another device may have a different size).
+    if (view && this.doc.size > 0) {
+      this.cam.state = view;
+      if (!this.drawingOnScreen()) this.fitAll();
+    } else if (this.doc.size > 0) this.fitAll();
     else this.resetView();
     this.viewChanged();
     this.emit();
@@ -863,6 +869,15 @@ export class App {
   fitBox(bx: import('./core/geom').Box): void {
     this.cam.fit(bx, this.width, this.height, Math.min(60, Math.min(this.width, this.height) / 8));
     this.viewChanged();
+  }
+
+  /** Whether the middle of the drawing lies within the window. */
+  private drawingOnScreen(): boolean {
+    let bx = emptyBox();
+    for (const e of this.doc.visibleEntities()) bx = boxUnion(bx, entityBox(e));
+    if (isEmptyBox(bx)) return true;
+    const c = this.cam.toScreen({ x: (bx.minX + bx.maxX) / 2, y: (bx.minY + bx.maxY) / 2 });
+    return c.x >= 0 && c.y >= 0 && c.x <= this.width && c.y <= this.height;
   }
 
   fitAll(): void {
