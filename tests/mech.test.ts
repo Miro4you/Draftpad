@@ -110,3 +110,16 @@ describe('label resolver', () => {
     }
   });
 });
+
+describe('subscripts in dimension figures and one-line texts', () => {
+  it('lowers and shrinks the index like free-body labels', () => {
+    const dim = { ...base, id: 'd', kind: 'dim' as const, type: 'lin' as const, p1: { x: 0, y: 0 }, p2: { x: 40, y: 0 }, dir: 0, off: 10, text: 'M_max' };
+    const t = layoutAnno(dim).texts;
+    expect(t.map((x) => x.text)).toEqual(['M', 'max']);
+    expect(t[1].size).toBeLessThan(t[0].size);
+    expect(t[1].p.y).toBeGreaterThan(t[0].p.y); // y points down: index sits lower
+    const txt = { ...base, id: 't', kind: 'text' as const, at: { x: 0, y: 0 }, text: 'F_A = 3 kN', size: 3.5, angle: 0 };
+    expect(layoutAnno(txt).texts.map((x) => x.text)).toEqual(['F', 'A', ' = 3 kN']);
+    expect(layoutAnno({ ...txt, id: 't2', text: 'a_b\nzwei' }).texts.map((x) => x.text)).toEqual(['a_b', 'zwei']);
+  });
+});
