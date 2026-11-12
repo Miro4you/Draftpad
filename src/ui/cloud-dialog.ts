@@ -18,7 +18,7 @@ import { ask, baseDialog } from './dialogs';
 import { h, releaseTextFocus } from './dom';
 
 /** Small PNG preview of the drawing as a data URL (about 320 px wide). */
-async function thumbnail(app: App): Promise<string | undefined> {
+export async function thumbnail(app: App): Promise<string | undefined> {
   const size = exportSize(app.doc, { margin: 4 });
   if (!size) return undefined;
   const dpi = Math.min(150, (320 / Math.max(size.w, size.h)) * 25.4);
@@ -36,7 +36,7 @@ async function thumbnail(app: App): Promise<string | undefined> {
   }
 }
 
-function defaultName(app: App): string {
+export function defaultName(app: App): string {
   for (const e of app.doc.all()) if (e.kind === 'sheet' && e.fields.title) return e.fields.title;
   const d = new Date();
   return `Skizze ${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;

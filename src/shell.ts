@@ -9,7 +9,9 @@ import { showExportDialog } from './ui/export-dialog';
 import { editSheet, sheetFollowScale } from './ui/sheet-dialog';
 import { showTimelapseDialog } from './ui/timelapse-dialog';
 import { showCloudDialog } from './ui/cloud-dialog';
-import { setCloudCurrent } from './storage/cloud';
+import { setCloudCurrent, cloudCurrent, saveCloudDrawing, loadCloudDrawing, newCloudId, femUrl, setFemUrl, femOpenUrl } from './storage/cloud';
+import { thumbnail, defaultName } from './ui/cloud-dialog';
+import { askText } from './ui/dialogs';
 import { LiveSession } from './storage/live';
 import type { DocFile } from './core/types';
 
@@ -118,6 +120,44 @@ export function startShell(root: HTMLElement, embed?: EmbedOptions): App {
   }
   document.addEventListener('app:open', open);
 
+  // ---- FEM-Nachweis: Zeichnung in die Online-Ablage legen und in Projekt-FEM öffnen ---------------
+
+  async function sendToFem(): Promise<void> {
+    if (app.doc.size === 0) return app.toast('Die Zeichnung ist leer.');
+    // Fenster gleich öffnen (Safari erlaubt Pop-ups nur direkt nach dem Tippen), Adresse danach setzen
+    let base = femUrl();
+    if (!base) {
+      const u = await askText(
+        'Projekt-FEM-Adresse',
+        'http://',
+        'Speichern',
+        'Wo läuft Projekt-FEM? z. B. http://nas:8790 (mit Zugangsschlüssel: http://nas:8790/#k=…)',
+      );
+      if (!u || u.trim() === 'http://') return;
+      setFemUrl(u);
+      base = femUrl();
+    }
+    const win = window.open('about:blank', '_blank');
+    try {
+      const cur = cloudCurrent();
+      const name = cur?.name ?? defaultName(app);
+      const id = cur?.id ?? newCloudId(name);
+      await saveCloudDrawing(id, name, app.doc.toFile(app.cam.state), await thumbnail(app));
+      setCloudCurrent({ id, name });
+      const target = femOpenUrl(base, id);
+      if (win) win.location.href = target;
+      else window.location.href = target;
+      app.toast(`„${name}“ gespeichert und in Projekt-FEM geöffnet`);
+    } catch (err) {
+      win?.close();
+      app.toast(`Nicht gespeichert: ${err instanceof Error ? err.message : String(err)} – Online-Ablage prüfen`);
+    }
+  }
+  async function changeFemUrl(): Promise<void> {
+    const u = await askText('Projekt-FEM-Adresse', femUrl() || 'http://', 'Speichern', 'z. B. http://nas:8790 (mit Zugangsschlüssel: http://nas:8790/#k=…); leer = zurücksetzen', true);
+    if (u !== null) setFemUrl(u === 'http://' ? '' : u);
+  }
+
   // ---- UI ---------------------------------------------------------------------------
 
   const toast = new Toast();
@@ -135,6 +175,8 @@ export function startShell(root: HTMLElement, embed?: EmbedOptions): App {
       timelapse: () => showTimelapseDialog(app),
       sheet: () => void editSheet(app),
       cloud: () => void showCloudDialog(app),
+      fem: () => void sendToFem(),
+      femUrl: () => void changeFemUrl(),
       help: () => help.showModal(),
     },
   );
@@ -178,7 +220,21 @@ export function startShell(root: HTMLElement, embed?: EmbedOptions): App {
   window.addEventListener('pagehide', () => void app.saveNow());
   if (embed) app.loadEmbedded(embed.drawing);
   // Restore the autosaved drawing, then reconnect a live drawing if one was open.
-  else void app.load().then(() => app.live?.resume());
+  else {
+    // ?open=<id>: Zeichnung aus der Online-Ablage öffnen (z. B. „In Draftpad bearbeiten“ aus Projekt-FEM)
+    const openId = new URLSearchParams(location.search).get('open');
+    if (openId && /^[a-z0-9][a-z0-9-]{0,63}$/.test(openId)) {
+      history.replaceState(null, '', location.pathname + location.hash);
+      void loadCloudDrawing(openId)
+        .then((data) => {
+          app.live?.stop();
+          app.loadDrawing(data);
+          setCloudCurrent({ id: openId, name: openId });
+          app.toast('Zeichnung aus der Online-Ablage geöffnet');
+        })
+        .catch(() => void app.load().then(() => app.toast('Zeichnung nicht gefunden – Online-Ablage prüfen')));
+    } else void app.load().then(() => app.live?.resume());
+  }
 
   // Handy for debugging and automated tests.
   (window as unknown as { __app: App }).__app = app;

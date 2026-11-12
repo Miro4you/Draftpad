@@ -265,10 +265,23 @@ async function api(req, res, path) {
       }
     }
     list.sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+    // ?thumbs=0: ohne Vorschaubilder (z. B. für Abfragen „hat sich etwas geändert?“ aus Projekt-FEM)
+    if (new URL(req.url || '/', 'http://x').searchParams.get('thumbs') === '0') for (const e of list) delete e.thumb;
     return send(res, 200, list);
   }
   const lm = /^\/api\/live\/([^/]+)\/(events|ops)$/.exec(path);
   if (lm) return ID.test(lm[1]) ? liveApi(req, res, lm[1], lm[2]) : send(res, 404, { error: 'Nicht gefunden' });
+  // Name und Änderungszeit einer Zeichnung, ohne die Zeichnung selbst
+  const mm = /^\/api\/drawings\/([^/]+)\/meta$/.exec(path);
+  if (mm && req.method === 'GET') {
+    if (!ID.test(mm[1])) return send(res, 404, { error: 'Nicht gefunden' });
+    try {
+      const meta = JSON.parse(await readFile(metaPath(mm[1]), 'utf8'));
+      return send(res, 200, { id: mm[1], name: meta.name, updated: meta.updated, size: meta.size });
+    } catch {
+      return send(res, 404, { error: 'Zeichnung nicht gefunden' });
+    }
+  }
   const m = /^\/api\/drawings\/([^/]+)$/.exec(path);
   if (!m || !ID.test(m[1])) return send(res, 404, { error: 'Nicht gefunden' });
   const id = m[1];

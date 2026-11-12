@@ -273,7 +273,18 @@ export class Menu {
 
   constructor(
     private app: App,
-    actions: { newDrawing: () => void; open: () => void; download: () => void; exportFile: () => void; timelapse: () => void; sheet: () => void; cloud: () => void; help: () => void },
+    actions: {
+      newDrawing: () => void;
+      open: () => void;
+      download: () => void;
+      exportFile: () => void;
+      timelapse: () => void;
+      sheet: () => void;
+      cloud: () => void;
+      fem?: () => void;
+      femUrl?: () => void;
+      help: () => void;
+    },
   ) {
     const item = (label: string, fn: () => void, hint = '') => {
       const b = h('button', { class: 'menu-item', role: 'menuitem' }, [h('span', { text: label }), h('kbd', { text: hint })]);
@@ -312,6 +323,7 @@ export class Menu {
           item('Zeitraffer-Video …', actions.timelapse),
           item('Online-Ablage …', actions.cloud),
           item('Blatt & Schriftfeld …', actions.sheet),
+          ...(actions.fem ? [h('div', { class: 'menu-sep' }), item('In Projekt-FEM nachweisen', actions.fem), item('Projekt-FEM-Adresse …', actions.femUrl ?? (() => {}))] : []),
         ];
     this.el.append(
       ...fileItems,

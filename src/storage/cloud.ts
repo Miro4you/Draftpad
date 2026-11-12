@@ -107,3 +107,19 @@ export function cloudCurrent(): CloudCurrent | null {
 export function setCloudCurrent(c: CloudCurrent | null): void {
   savePref('cloudCurrent', c ?? { id: '', name: '' });
 }
+
+/** Adresse von Projekt-FEM (FEM-Nachweis), z. B. http://nas:8790 – ggf. mit #k=<Zugangsschlüssel>. */
+export function femUrl(): string {
+  return loadPref<string>('femUrl', '');
+}
+
+export function setFemUrl(u: string): void {
+  savePref('femUrl', u.trim());
+}
+
+/** Adresse, die Projekt-FEM mit der Zeichnung <id> der Online-Ablage öffnet. */
+export function femOpenUrl(base: string, id: string): string {
+  const u = base.trim().replace(/\/+$/, '');
+  const withScheme = /^https?:\/\//.test(u) ? u : `http://${u}`;
+  return withScheme.includes('#') ? `${withScheme}&draftpad=${encodeURIComponent(id)}` : `${withScheme}/#draftpad=${encodeURIComponent(id)}`;
+}

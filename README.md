@@ -118,6 +118,16 @@ In der Online-Ablage bei einer Zeichnung „Live“ wählen – auf jedem Gerät
 - `src/export/drawing-svg.ts` → `drawingToSvg(drawing, { theme })` liefert die Zeichnung als SVG ohne Editor und ohne Styles – zum Anzeigen im Gastgeber.
 - Demo: `npm run dev`, dann `/embed-demo.html`.
 
+## Mit Projekt-FEM (FEM-Nachweis)
+
+- Menü › **In Projekt-FEM nachweisen**: speichert die Zeichnung in der Online-Ablage und öffnet sie in Projekt-FEM
+  (`<projekt-fem>/#draftpad=<id>`). Beim ersten Mal fragt Draftpad nach der Adresse von Projekt-FEM
+  (z. B. `http://nas:8790`, mit Zugangsschlüssel `http://nas:8790/#k=…`); ändern unter Menü › Projekt-FEM-Adresse.
+- Projekt-FEM holt Zeichnungen über die Schnittstelle der Online-Ablage; dafür gibt es zusätzlich
+  `GET /api/drawings?thumbs=0` (Liste ohne Vorschaubilder) und `GET /api/drawings/<id>/meta` (Name, Änderungszeit).
+- `http://<draftpad>/?open=<id>` öffnet eine Zeichnung der Online-Ablage direkt (Knopf „In Draftpad bearbeiten“
+  in Projekt-FEM).
+
 ## Entwicklung
 
 ```bash
