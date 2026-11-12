@@ -229,7 +229,7 @@ function layoutDim(e: DimEntity): AnnoLayout {
   const L: AnnoLayout = { lines: [], arcs: [], fills: [], texts: [] };
   // A typed dimension text can stand for a host value ("l" → "l = 2 m"), like labels.
   const text = e.text ? shownLabel(e.text) : dimText(e);
-  const w = textWidth(text, TEXT_H);
+  const w = labelWidth(text, TEXT_H);
   if (e.type === 'lin') {
     const { n, s1, s2, base, d1, d2, len, along, u, m } = linFrame(e);
     // Extension lines run from the feature past the dimension line.
@@ -312,6 +312,7 @@ function layoutDim(e: DimEntity): AnnoLayout {
       baseline: 'bottom',
     });
   }
+  L.texts = withSubscripts(L.texts);
   return L;
 }
 
@@ -597,6 +598,36 @@ export function splitLabel(label: string): { main: string; sub: string; rest: st
   return m ? { main: m[1], sub: m[2], rest: m[3] } : { main: label, sub: '', rest: '' };
 }
 
+/**
+ * Splits texts like "M_max = 3 kNm" into main text, smaller lowered subscript and rest,
+ * for texts written at any angle (dimension figures, one-line texts). `t.p` stays the
+ * horizontal centre of the whole label.
+ */
+function withSubscripts(texts: AnnoText[]): AnnoText[] {
+  const out: AnnoText[] = [];
+  for (const t of texts) {
+    const { main, sub, rest } = splitLabel(t.text);
+    if (!sub) {
+      out.push(t);
+      continue;
+    }
+    const r = { x: Math.cos(t.angle), y: Math.sin(t.angle) };
+    const down = { x: -r.y, y: r.x }; // y points down in world
+    const subSize = t.size * SUB_SCALE;
+    let x = -labelWidth(t.text, t.size) / 2;
+    const put = (text: string, size: number, drop: number) => {
+      if (!text) return;
+      const tw = textWidth(text, size);
+      out.push({ ...t, p: add(add(t.p, r, x + tw / 2), down, drop), text, size });
+      x += tw;
+    };
+    put(main, t.size, 0);
+    put(sub, subSize, subSize * 0.35);
+    put(rest, t.size, 0);
+  }
+  return out;
+}
+
 /** Width of a label including its smaller subscript. */
 export function labelWidth(label: string, size = TEXT_H): number {
   const { main, sub, rest } = splitLabel(label);
@@ -759,10 +790,12 @@ function layoutText(e: TextEntity): AnnoLayout {
   const text = e.text.includes('\n') ? e.text : shownLabel(e.text);
   text.split('\n').forEach((line, i) => {
     if (!line) return;
-    const w = textWidth(line, size);
+    const oneLine = !e.text.includes('\n');
+    const w = oneLine ? labelWidth(line, size) : textWidth(line, size);
     const start = add(e.at, below, i * size * LINE_SPACING);
     L.texts.push({ p: add(start, r, w / 2), angle: e.angle, text: line, size, baseline: 'bottom' });
   });
+  if (!e.text.includes('\n')) L.texts = withSubscripts(L.texts);
   return L;
 }
 
