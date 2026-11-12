@@ -9,7 +9,7 @@ import { showExportDialog } from './ui/export-dialog';
 import { editSheet, sheetFollowScale } from './ui/sheet-dialog';
 import { showTimelapseDialog } from './ui/timelapse-dialog';
 import { showCloudDialog } from './ui/cloud-dialog';
-import { setCloudCurrent, cloudCurrent, saveCloudDrawing, loadCloudDrawing, newCloudId, femUrl, setFemUrl, femOpenUrl } from './storage/cloud';
+import { setCloudCurrent, cloudCurrent, saveCloudDrawing, loadCloudDrawing, loadCloudMeta, newCloudId, femUrl, setFemUrl, femOpenUrl } from './storage/cloud';
 import { thumbnail, defaultName } from './ui/cloud-dialog';
 import { askText } from './ui/dialogs';
 import { LiveSession } from './storage/live';
@@ -225,11 +225,11 @@ export function startShell(root: HTMLElement, embed?: EmbedOptions): App {
     const openId = new URLSearchParams(location.search).get('open');
     if (openId && /^[a-z0-9][a-z0-9-]{0,63}$/.test(openId)) {
       history.replaceState(null, '', location.pathname + location.hash);
-      void loadCloudDrawing(openId)
-        .then((data) => {
+      void Promise.all([loadCloudDrawing(openId), loadCloudMeta(openId).catch(() => null)])
+        .then(([data, meta]) => {
           app.live?.stop();
           app.loadDrawing(data);
-          setCloudCurrent({ id: openId, name: openId });
+          setCloudCurrent({ id: openId, name: meta?.name || openId });
           app.toast('Zeichnung aus der Online-Ablage geöffnet');
         })
         .catch(() => void app.load().then(() => app.toast('Zeichnung nicht gefunden – Online-Ablage prüfen')));

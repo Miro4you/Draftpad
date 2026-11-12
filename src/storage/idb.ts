@@ -56,7 +56,12 @@ export async function idbSet(key: string, value: unknown): Promise<boolean> {
 export function loadPref<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(`skizzen-cad.${key}`);
-    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+    if (!raw) return fallback;
+    const v: unknown = JSON.parse(raw);
+    const isObj = (x: unknown) => typeof x === 'object' && x !== null && !Array.isArray(x);
+    // Objekte mit den Vorgaben ergänzen; einfache Werte (z. B. eine Adresse) unverändert – nie in ein Objekt mischen
+    if (isObj(fallback)) return isObj(v) ? ({ ...fallback, ...(v as object) } as T) : fallback;
+    return typeof v === typeof fallback ? (v as T) : fallback;
   } catch {
     return fallback;
   }

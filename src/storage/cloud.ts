@@ -73,6 +73,7 @@ export async function cloudHealth(): Promise<{ ok: boolean; auth: boolean }> {
 
 export const listDrawings = () => call<CloudEntry[]>('/drawings');
 export const loadCloudDrawing = (id: string) => call<unknown>(`/drawings/${encodeURIComponent(id)}`);
+export const loadCloudMeta = (id: string) => call<{ id: string; name: string; updated: string }>(`/drawings/${encodeURIComponent(id)}/meta`);
 export const deleteCloudDrawing = (id: string) => call<{ ok: boolean }>(`/drawings/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
 export function saveCloudDrawing(id: string, name: string, doc: unknown, thumb?: string): Promise<CloudEntry> {
