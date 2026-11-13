@@ -162,8 +162,13 @@ export class App {
   snapSuspended = false;
   /** Live editing session (set up by main). */
   live: LiveSession | null = null;
-  /** Shift held: lengths are free (no length steps) while it is down. */
+  /** Shift held: lengths and angles are free (no length steps, no angle snap) while it is down. */
   lengthFree = false;
+
+  /** Angle snap in effect: switched on and not freed by holding Shift. */
+  get angleSnapOn(): boolean {
+    return this.settings.angleMode === 'snap' && !this.lengthFree;
+  }
   /** Pen or mouse hovering over the canvas without contact (screen CSS px). */
   private hoverAt: { screen: Vec; type: PointerKind } | null = null;
 
@@ -715,7 +720,7 @@ export class App {
     holdAngle = true,
   ): { p: Vec; hit: SnapHit | null } {
     const s = this.snapPoint(world, pointerType, exclude);
-    if (holdAngle && this.settings.angleMode === 'snap' && !this.snapSuspended) {
+    if (holdAngle && this.angleSnapOn && !this.snapSuspended) {
       // The angle snap always holds: a snap point only counts when it lies on the
       // snapped direction; otherwise the end goes where that ray meets the geometry.
       const step = this.settings.angleStep;
@@ -733,7 +738,11 @@ export class App {
     }
     if (s.hit && dist(s.hit.p, anchor) > 1e-9) return s;
     if (this.snapSuspended) return { p: world, hit: null };
-    const p = this.settings.angleMode === 'snap' ? snapAngle(anchor, world, this.settings.angleStep) : softSnapAngle(anchor, world, SOFT_ANGLE_TOL);
+    const p = this.lengthFree
+      ? world
+      : this.angleSnapOn
+        ? snapAngle(anchor, world, this.settings.angleStep)
+        : softSnapAngle(anchor, world, SOFT_ANGLE_TOL);
     return { p: holdAngle ? this.stepLength(anchor, p) : p, hit: null };
   }
 
@@ -780,9 +789,9 @@ export class App {
    * otherwise only a gentle pull to multiples of 45°.
    */
   snapDegrees(deg: number): number {
-    if (this.snapSuspended) return deg;
+    if (this.snapSuspended || this.lengthFree) return deg;
     const step = this.settings.angleStep;
-    if (this.settings.angleMode === 'snap') return Math.round(deg / step) * step;
+    if (this.angleSnapOn) return Math.round(deg / step) * step;
     const t = Math.round(deg / 45) * 45;
     return Math.abs(deg - t) <= SOFT_ANGLE_TOL ? t : deg;
   }

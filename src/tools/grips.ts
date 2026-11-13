@@ -100,7 +100,7 @@ export function gripsFor(app: App, e: Entity, style: GripStyle): Grip[] {
     case 'dim': {
       // The figure (on the dimension line under it) moves along and away; the
       // feature points can be re-attached elsewhere with snapping.
-      const step = app.settings.angleMode === 'snap' ? 15 : 0;
+      const step = app.angleSnapOn ? 15 : 0;
       const grips: Grip[] = [
         { key: 'text', anchor: dimTextAnchor(e), offset: { x: 0, y: 0 }, kind: 'move', free: true, apply: (t) => dragDimText(e, t, step) },
       ];

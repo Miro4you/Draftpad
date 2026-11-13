@@ -405,7 +405,7 @@ export function helpDialog(): HTMLDialogElement {
     ['Mausrad', 'Zoomen'],
     ['Leertaste + Ziehen, mittlere/rechte Maustaste', 'Ansicht verschieben'],
     ['Alt halten', 'Fang kurz aussetzen'],
-    ['Shift halten', 'Längen frei statt in 0,5-mm-Schritten (Schrittweite im Winkel-Menü)'],
+    ['Shift halten', 'Längen und Winkel frei (keine Längenschritte, kein Winkelfang)'],
     ['V · F · L · C · B · K', 'Auswahl · Freihand · Linie · Kreis · Bogen · Achsenkreuz'],
     ['Werkzeuggruppe: nochmal tippen, lange drücken oder mit dem Pencil darüber schweben', 'Auswahl der Gruppe öffnen'],
     ['Strich-Punkt-Linie', 'Wird automatisch Symmetrieachse (Knopf am Ende schaltet Spiegeln)'],

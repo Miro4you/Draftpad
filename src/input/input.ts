@@ -252,7 +252,7 @@ export class InputController {
     this.updateSuspension();
   }
 
-  /** Shift held: free lengths instead of length steps. */
+  /** Shift held: free lengths and angles instead of steps. */
   private setShift(v: boolean): void {
     if (v === this.app.lengthFree) return;
     this.app.lengthFree = v;

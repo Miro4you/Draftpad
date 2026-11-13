@@ -164,7 +164,7 @@ export class ArcTool implements Tool {
   private freeDirection(p0: Vec, q: Vec): Vec {
     let target = q;
     if (!this.app.snapSuspended) {
-      if (this.app.settings.angleMode === 'snap') target = snapAngle(p0, q, this.app.settings.angleStep);
+      if (this.app.angleSnapOn) target = snapAngle(p0, q, this.app.settings.angleStep);
       else target = softSnapAngle(p0, q, 3);
     }
     const l = dist(p0, target) || 1;
@@ -261,7 +261,7 @@ export class ArcTool implements Tool {
     const deg = (Math.abs(arc.sweep) * 180) / Math.PI;
     const sign = Math.sign(arc.sweep);
     let target = deg;
-    if (this.app.settings.angleMode === 'snap') target = this.app.snapDegrees(deg);
+    if (this.app.angleSnapOn) target = this.app.snapDegrees(deg);
     else {
       const k = Math.round(deg / 45) * 45;
       const end = arcPoint(arc.c, arc.r, arc.start + (sign * k * Math.PI) / 180);
@@ -283,7 +283,7 @@ export class ArcTool implements Tool {
       const sweep = st.a - st.a0;
       const deg = (Math.abs(sweep) * 180) / Math.PI;
       let snapped = deg;
-      if (this.app.settings.angleMode === 'snap') snapped = this.app.snapDegrees(deg);
+      if (this.app.angleSnapOn) snapped = this.app.snapDegrees(deg);
       else {
         const k = Math.round(deg / 45) * 45;
         const end = arcPoint(st.c, st.r, st.a0 + (Math.sign(sweep) * k * Math.PI) / 180);

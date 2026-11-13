@@ -95,7 +95,7 @@ In der Online-Ablage bei einer Zeichnung „Live“ wählen – auf jedem Gerät
 | Zwei Finger | Verschieben, Zoomen, Drehen |
 | Zwei- / Drei-Finger-Tipp | Rückgängig / Wiederholen |
 | Finger halten beim Zeichnen, oder Alt | Fang kurz aussetzen |
-| Shift halten | Längen frei statt in Schritten |
+| Shift halten | Längen und Winkel frei (ohne Schritte und Winkelfang) |
 | Mausrad | Zoomen |
 | Leertaste + Ziehen, mittlere/rechte Maustaste | Verschieben |
 | V · F · L · C · B | Auswahl · Freihand · Linie · Kreis · Bogen |

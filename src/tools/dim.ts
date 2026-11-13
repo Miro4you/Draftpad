@@ -106,7 +106,7 @@ export class DimTool implements Tool {
   private build(pl: Place, q: Vec, preview: boolean): DimEntity | null {
     const mk = (d: Omit<DimEntity, 'id' | 'layerId' | 'z' | 'style'>): DimEntity =>
       preview ? { ...d, id: 'preview-dim', layerId: '', z: 0, style: this.thinStyle() } : this.styled(d);
-    const snapDeg = (deg: number) => (this.app.settings.angleMode === 'snap' ? Math.round(deg / 15) * 15 : deg);
+    const snapDeg = (deg: number) => (this.app.angleSnapOn ? Math.round(deg / 15) * 15 : deg);
     switch (pl.t) {
       case 'lin': {
         const { dir, off } = linearDim(pl.p1, pl.p2, q);
