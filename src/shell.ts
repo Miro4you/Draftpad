@@ -148,12 +148,16 @@ export function startShell(root: HTMLElement, embed?: EmbedOptions): App {
       const cur = cloudCurrent();
       const name = cur?.name ?? defaultName(app);
       const id = cur?.id ?? newCloudId(name);
-      await saveCloudDrawing(id, name, app.doc.toFile(app.cam.state), await thumbnail(app));
+      // schon live auf dem Server: nichts zu speichern (jede Änderung geht ohnehin sofort hin)
+      const alreadyLive = app.live?.id === id && app.live.status === 'live';
+      if (!alreadyLive) await saveCloudDrawing(id, name, app.doc.toFile(app.cam.state), await thumbnail(app));
       setCloudCurrent({ id, name });
       const target = femOpenUrl(base, id);
       if (win) win.location.href = target;
       else window.location.href = target;
-      app.toast(`„${name}“ gespeichert und in Projekt-FEM geöffnet`);
+      // ab jetzt live bearbeiten: weitere Änderungen landen sofort auf dem Server, Projekt-FEM sieht sie
+      if (app.live && app.live.id !== id) app.live.start(id, name);
+      app.toast(`„${name}“ in Projekt-FEM geöffnet – Änderungen werden live übertragen`);
     } catch (err) {
       win?.close();
       app.toast(`Nicht gespeichert: ${err instanceof Error ? err.message : String(err)} – Online-Ablage prüfen`);
@@ -234,10 +238,17 @@ export function startShell(root: HTMLElement, embed?: EmbedOptions): App {
       history.replaceState(null, '', location.pathname + location.hash);
       void Promise.all([loadCloudDrawing(openId), loadCloudMeta(openId).catch(() => null)])
         .then(([data, meta]) => {
-          app.live?.stop();
-          app.loadDrawing(data);
-          setCloudCurrent({ id: openId, name: meta?.name || openId });
-          app.toast('Zeichnung aus der Online-Ablage geöffnet');
+          const name = meta?.name || openId;
+          if (app.live) {
+            // live bearbeiten (z. B. „In Draftpad bearbeiten“ aus Projekt-FEM): jede Änderung geht sofort an den Server
+            app.loadDrawing(data);
+            app.live.start(openId, name);
+            app.toast(`„${name}“ wird live bearbeitet – Projekt-FEM sieht die Änderungen`);
+          } else {
+            app.loadDrawing(data);
+            setCloudCurrent({ id: openId, name });
+            app.toast('Zeichnung aus der Online-Ablage geöffnet');
+          }
         })
         .catch(() => void app.load().then(() => app.toast('Zeichnung nicht gefunden – Online-Ablage prüfen')));
     } else void app.load().then(() => app.live?.resume());
