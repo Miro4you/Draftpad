@@ -165,11 +165,17 @@ export function showCloudDialog(app: App): void {
       }
       try {
         const data = await loadCloudDrawing(e.id);
-        app.live?.stop();
         app.loadDrawing(data);
-        setCloudCurrent({ id: e.id, name: e.name });
-        done();
-        app.toast(`„${e.name}“ geöffnet`);
+        if (app.live) {
+          // live bearbeiten: jede Änderung geht sofort an den Server (Projekt-FEM und andere Geräte sehen sie)
+          app.live.start(e.id, e.name);
+          done();
+          app.toast(`„${e.name}“ geöffnet – Änderungen werden live gespeichert`);
+        } else {
+          setCloudCurrent({ id: e.id, name: e.name });
+          done();
+          app.toast(`„${e.name}“ geöffnet`);
+        }
       } catch (err) {
         fail(err);
       }
