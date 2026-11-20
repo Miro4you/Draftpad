@@ -323,9 +323,10 @@ export class HatchTool implements Tool {
       .reverse()
       .find((e): e is HatchEntity => e.kind === 'hatch' && insideHatch(e.loops, world));
     if (existing) {
-      if (existing.pattern !== set.hatchPattern || existing.spacing !== set.hatchSpacing) {
-        app.doc.update({ ...existing, pattern: set.hatchPattern, spacing: set.hatchSpacing });
-      } else app.toast('Fläche ist schon schraffiert');
+      const angle = set.hatchAngle ?? 0;
+      if (existing.pattern !== set.hatchPattern || existing.spacing !== set.hatchSpacing || existing.angle !== angle) {
+        app.doc.update({ ...existing, pattern: set.hatchPattern, spacing: set.hatchSpacing, angle });
+      } else app.toast(set.hatchPattern === 'solid' ? 'Fläche ist schon gefüllt' : 'Fläche ist schon schraffiert');
       return true;
     }
     if (!app.ensureDrawableLayer()) return false;
@@ -340,7 +341,7 @@ export class HatchTool implements Tool {
       return false;
     }
     // Hatch lines in the current pen (choose a thin one for ISO hatching).
-    const e = app.newEntity<HatchEntity>({ kind: 'hatch', loops: r.loops, pattern: set.hatchPattern, angle: 0, spacing: set.hatchSpacing, gap: set.hatchGap }, 'H');
+    const e = app.newEntity<HatchEntity>({ kind: 'hatch', loops: r.loops, pattern: set.hatchPattern, angle: set.hatchAngle ?? 0, spacing: set.hatchSpacing, gap: set.hatchGap }, 'H');
     app.addDrawn({ ...e, style: { ...e.style, lineType: 'solid' } });
     return true;
   }

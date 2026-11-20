@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dimText, dimTextAnchor, dimValue, dragDimText, formatMeasure, layoutAnno } from '../src/core/annotations';
 import type { DimEntity } from '../src/core/types';
 import { linearDim } from '../src/tools/dim';
+import { drawHatch, isSolidFill, type DrawCtx } from '../src/render/annotations';
 import { textWidthMm, toPdf, toSvg, VectorRecorder } from '../src/export/vector';
 
 const style = { pen: 'ink' as const, width: 0.25, lineType: 'solid' as const, color: null };
@@ -89,6 +90,23 @@ describe('vector export', () => {
     expect(pdf.slice(xref, xref + 4)).toBe('xref');
     const offs = [...pdf.slice(xref).matchAll(/^(\d{10}) 00000 n/gm)].map((m) => Number(m[1]));
     offs.forEach((o, i) => expect(pdf.slice(o, o + 7)).toBe(`${i + 1} 0 obj`));
+  });
+
+  it('exports a solid fill as an even-odd area and a rotated hatch as lines', () => {
+    const loops = [
+      [0, 0, 20, 0, 20, 20, 0, 20],
+      [5, 5, 15, 5, 15, 15, 5, 15],
+    ];
+    const base = { kind: 'hatch' as const, id: 'h', layerId: 'l', z: 0, style, loops, spacing: 2, angle: 0 };
+    const solid = { ...base, pattern: 'solid' as const };
+    expect(isSolidFill(solid)).toBe(true);
+    const r = new VectorRecorder();
+    drawHatch(r as unknown as DrawCtx, solid, '#123456', 0.25, 1);
+    const page = { minX: 0, minY: 0, width: 20, height: 20, background: '#ffffff' };
+    expect(toSvg(r, page)).toContain('fill-rule="evenodd"');
+    const r2 = new VectorRecorder();
+    drawHatch(r2 as unknown as DrawCtx, { ...base, pattern: 'diag', angle: 30 }, '#123456', 0.25, 1);
+    expect(r2.items.some((i) => i.kind === 'path' && i.stroke)).toBe(true);
   });
 
   it('measures Helvetica text', () => {

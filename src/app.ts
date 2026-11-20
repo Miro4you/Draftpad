@@ -76,6 +76,8 @@ export interface Settings {
   hatchPattern: HatchPattern;
   /** Hatch line spacing in mm. */
   hatchSpacing: number;
+  /** Extra rotation of the hatch pattern in degrees (0 = pattern as is). */
+  hatchAngle: number;
   /** Gaps up to this size (mm) still close an area for hatching. */
   hatchGap: number;
   /** GPS tool: place datum symbols or tolerance frames. */
@@ -123,6 +125,7 @@ const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   hatchPattern: 'diag',
   hatchSpacing: 2,
+  hatchAngle: 0,
   hatchGap: 0.5,
   gpsMode: 'datum',
   filletRadius: 3,

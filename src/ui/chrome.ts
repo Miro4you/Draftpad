@@ -76,14 +76,20 @@ export class ViewBar {
       layers.close();
       document.dispatchEvent(new CustomEvent('app:timelapse'));
     });
+    const exportBtn = h('button', { class: 'btn', title: 'Exportieren (PDF, SVG, PNG, JPEG) – ⇧⌘E', 'aria-label': 'Exportieren', html: icons.exportFile });
+    exportBtn.addEventListener('click', () => {
+      menu.close();
+      layers.close();
+      document.dispatchEvent(new CustomEvent('app:export'));
+    });
     this.liveBtn = h('button', { class: 'btn wide live-badge', title: 'Live-Bearbeitung (Online-Ablage)' });
     this.liveBtn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('app:cloud')));
     // The compact tool set (inside a host app) has no layers; embedded there is no timelapse.
     const items = app.compact
       ? [this.compass, this.zoom, this.scaleBtn, menuBtn]
       : app.embedded
-        ? [this.compass, this.zoom, this.scaleBtn, this.layerBtn, menuBtn]
-        : [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, recordBtn, menuBtn];
+        ? [this.compass, this.zoom, this.scaleBtn, this.layerBtn, exportBtn, menuBtn]
+        : [this.liveBtn, this.compass, this.zoom, this.scaleBtn, this.layerBtn, exportBtn, recordBtn, menuBtn];
     if (done) {
       const doneBtn = h('button', { class: 'btn done-btn', text: done.label, title: `${done.label} – zurück` });
       doneBtn.addEventListener('click', () => {

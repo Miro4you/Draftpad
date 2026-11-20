@@ -181,8 +181,20 @@ export const PARTS: Record<PartKind, PartInfo> = {
 export function partLabel(spec: PartSpec): string {
   const info = PARTS[spec.kind];
   const len = spec.kind === 'socketScrew' || spec.kind === 'hexScrew' ? `×${spec.length}` : '';
-  const size = spec.kind === 'bearing' ? spec.size : spec.kind.startsWith('groove') ? `Ø${spec.size}` : spec.size;
+  const size = spec.kind === 'bearing' ? bearingText(spec.size) : spec.kind.startsWith('groove') ? `Ø${spec.size}` : spec.size;
   return `${info.name} ${size}${len}`;
+}
+
+/** Bearing designation with its dimensions: "6204 (d 20 · D 47 · B 14)". */
+export function bearingText(name: string): string {
+  const b = BEARINGS[name];
+  return b ? `${name} (d ${b.d} · D ${b.D} · B ${b.B})` : name;
+}
+
+/** Caption of a size button in the catalogue (bearings show bore, outside Ø and width). */
+export function sizeCaption(kind: PartKind, size: string): string {
+  const b = kind === 'bearing' ? BEARINGS[size] : undefined;
+  return b ? `${size} · ${b.d}×${b.D}×${b.B}` : size;
 }
 
 /** Bearing dimensions (d, D, B) for a designation. */

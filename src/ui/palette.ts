@@ -45,6 +45,7 @@ function hatchIcon(p: HatchPattern): string {
     steel: '<path d="M3 11 11 3M3 13.5 13.5 3M3 21 21 3M5.5 21 21 5.5"/>',
     plastic: '<path d="M3 13 13 3M11 21l10-10"/><path d="M3 21 21 3" stroke-dasharray="3 2"/>',
     dots: '<g fill="currentColor" stroke="none"><circle cx="7" cy="7" r="1.1"/><circle cx="17" cy="7" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="7" cy="17" r="1.1"/><circle cx="17" cy="17" r="1.1"/></g>',
+    solid: '<rect x="3" y="3" width="18" height="18" rx="1.5" fill="currentColor" stroke="none" opacity=".75"/>',
   };
   return `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1.5" stroke-width="1.1" opacity=".55"/>${lines[p]}</svg>`;
 }
@@ -269,6 +270,8 @@ export class Palette {
   private angleItems = new Map<string, HTMLButtonElement>();
   private stabilizer: HTMLInputElement;
   private stabilizerValue: HTMLElement;
+  private hatchAngle: HTMLInputElement;
+  private hatchAngleValue: HTMLElement;
 
   constructor(private app: App) {
     this.colors = new ColorPopover(app);
@@ -328,9 +331,17 @@ export class Palette {
       this.hatchItems.set(`g:${g}`, b);
       gapRow.append(b);
     }
+    this.hatchAngle = h('input', { type: 'range', min: '-90', max: '90', step: '5', id: 'hatch-angle', 'aria-label': 'Schraffurwinkel' });
+    this.hatchAngleValue = h('span', { class: 'range-value' });
+    this.hatchAngle.addEventListener('input', () => {
+      app.updateSettings({ hatchAngle: Number(this.hatchAngle.value) });
+      app.setTool('hatch');
+    });
     const hatchOpts = h('div', { class: 'fly-section' }, [
       h('div', { class: 'fly-title', text: 'Muster' }),
       patRow,
+      h('div', { class: 'fly-title', text: 'Drehung (zusätzlich zum Muster)' }),
+      h('div', { class: 'range-row' }, [this.hatchAngle, this.hatchAngleValue]),
       h('div', { class: 'fly-title', text: 'Abstand' }),
       spaceRow,
       h('div', { class: 'fly-title', text: 'Lücken schließen bis' }),
@@ -622,6 +633,8 @@ export class Palette {
         k === settings.angleMode || (settings.angleMode === 'snap' && k === `s${settings.angleStep}`) || k === `l${settings.lengthStep}`,
       );
     }
+    this.hatchAngle.value = String(settings.hatchAngle ?? 0);
+    this.hatchAngleValue.textContent = `${settings.hatchAngle ?? 0}°`;
     this.stabilizer.value = String(settings.stabilizer);
     this.stabilizerValue.textContent = settings.stabilizer ? `${settings.stabilizer} px` : 'aus';
     this.undoBtn.disabled = !doc.canUndo;

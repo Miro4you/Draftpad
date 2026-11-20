@@ -133,6 +133,7 @@ const PATTERNS: Record<HatchEntity['pattern'], HatchFamily[]> = {
   steel: [{ deg: -45, lines: [0, 0.35], period: 2 }],
   plastic: [{ deg: -45, lines: [0, 1], period: 2, dash: [null, [0.9, 0.45]] }],
   dots: [],
+  solid: [],
 };
 
 export const HATCH_NAMES: Record<HatchEntity['pattern'], string> = {
@@ -142,7 +143,11 @@ export const HATCH_NAMES: Record<HatchEntity['pattern'], string> = {
   steel: 'Doppellinie (Stahl)',
   plastic: 'Voll/gestrichelt (Kunststoff)',
   dots: 'Punkte (Beton, Sand)',
+  solid: 'Fläche füllen',
 };
+
+/** Solid fills lie under the lines of their layer. */
+export const isSolidFill = (e: { kind: string }): boolean => e.kind === 'hatch' && (e as HatchEntity).pattern === 'solid';
 
 /** Hatch lines clipped to the loops (even-odd), anchored to the world so neighbours line up. */
 export function drawHatch(ctx: DrawCtx, e: HatchEntity, color: string, width: number, alpha: number): void {
@@ -164,6 +169,14 @@ export function drawHatch(ctx: DrawCtx, e: HatchEntity, color: string, width: nu
       maxY = Math.max(maxY, y);
     }
     ctx.closePath();
+  }
+  if (e.pattern === 'solid') {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fill('evenodd');
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    return;
   }
   ctx.clip('evenodd');
   ctx.globalAlpha = alpha;

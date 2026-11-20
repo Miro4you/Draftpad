@@ -4,7 +4,7 @@ import { entityBox, type SketchDocument } from '../core/document';
 import { boxExpand, boxUnion, emptyBox, isEmptyBox, type Box } from '../core/geom';
 import { currentTheme, setPenTheme } from '../core/pens';
 import { isAnnotation, type Entity, type JournalEntry, type SyncOp } from '../core/types';
-import { setKnockout } from '../render/annotations';
+import { isSolidFill, setKnockout } from '../render/annotations';
 import { Painter } from '../render/painter';
 
 /**
@@ -262,7 +262,7 @@ export class TimelapseRenderer {
       const i = this.layers.findIndex((l) => l.id === id);
       return i >= 0 ? i : 1000 + this.plan.order.indexOf(id);
     };
-    return [...list].sort((a, b) => idx(a.layerId) - idx(b.layerId) || a.z - b.z);
+    return [...list].sort((a, b) => idx(a.layerId) - idx(b.layerId) || Number(isSolidFill(b)) - Number(isSolidFill(a)) || a.z - b.z);
   }
 
   private rebuildBase(cur: ReplayStep | undefined): void {
@@ -326,7 +326,9 @@ export class TimelapseRenderer {
         const visible = draw.filter((d) => d.alpha > 0.002);
         if (visible.length) {
           this.outPainter.begin(this.cam, 1, this.view);
-          for (const d of visible) this.outPainter.draw(d.e, d.alpha);
+          // Solid fills under the lines.
+          for (const d of visible) if (isSolidFill(d.e)) this.outPainter.draw(d.e, d.alpha);
+          for (const d of visible) if (!isSolidFill(d.e)) this.outPainter.draw(d.e, d.alpha);
         }
       }
       ctx.setTransform(1, 0, 0, 1, 0, 0);

@@ -3,6 +3,7 @@ import type { Camera } from '../core/camera';
 import { boxesIntersect, boxExpand, type Box } from '../core/geom';
 import { entityBox, type SketchDocument } from '../core/document';
 import { Painter } from './painter';
+import { isSolidFill } from './annotations';
 import { currentTheme, PAPER_COLORS } from '../core/pens';
 
 
@@ -40,9 +41,13 @@ export class SceneRenderer {
     for (const layer of doc.layers) {
       if (!layer.visible) continue;
       const alpha = layer.dimmed ? DIMMED_ALPHA : 1;
-      for (const e of byLayer.get(layer.id) ?? []) {
-        if (!boxesIntersect(boxExpand(entityBox(e), worldWidth(e) + margin), view)) continue;
-        this.painter.draw(e, alpha);
+      // Solid fills first, so the lines of the layer stay on top of them.
+      for (const pass of [true, false]) {
+        for (const e of byLayer.get(layer.id) ?? []) {
+          if (isSolidFill(e) !== pass) continue;
+          if (!boxesIntersect(boxExpand(entityBox(e), worldWidth(e) + margin), view)) continue;
+          this.painter.draw(e, alpha);
+        }
       }
     }
   }

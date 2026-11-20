@@ -64,7 +64,7 @@ export interface ArcEntity extends EntityBase {
 }
 
 /** Hatch patterns (DIN ISO 128-50 / DIN 201 style). */
-export type HatchPattern = 'diag' | 'diag2' | 'cross' | 'steel' | 'plastic' | 'dots';
+export type HatchPattern = 'diag' | 'diag2' | 'cross' | 'steel' | 'plastic' | 'dots' | 'solid';
 
 /** Hatched area: closed loops (outer outline and holes, even-odd). */
 export interface HatchEntity extends EntityBase {

@@ -5,7 +5,7 @@ import { currentTheme, dashArray, penColor, setPenTheme } from '../core/pens';
 import type { SketchDocument } from '../core/document';
 import { isAnnotation, type Entity, type SheetEntity } from '../core/types';
 import { sheetBox } from '../core/annotations';
-import { drawAnno, drawHatch, setKnockout, type DrawCtx } from '../render/annotations';
+import { drawAnno, drawHatch, isSolidFill, setKnockout, type DrawCtx } from '../render/annotations';
 import { centerMarks, Painter } from '../render/painter';
 import { traceEntity } from '../render/paths';
 import { drawingScale, worldWidth } from '../core/scale';
@@ -44,10 +44,13 @@ function collect(doc: SketchDocument, opts: ExportOptions): Job {
   let box = emptyBox();
   for (const l of doc.layers) {
     if (!l.visible) continue;
-    for (const e of doc.visibleEntities()) {
-      if (e.layerId !== l.id || (opts.only && !opts.only.has(e.id))) continue;
-      entities.push({ e, alpha: l.dimmed ? DIMMED_ALPHA : 1 });
-      box = boxUnion(box, entityBox(e));
+    // Solid fills first, so the lines of the layer stay on top of them.
+    for (const pass of [true, false]) {
+      for (const e of doc.visibleEntities()) {
+        if (e.layerId !== l.id || (opts.only && !opts.only.has(e.id)) || isSolidFill(e) !== pass) continue;
+        entities.push({ e, alpha: l.dimmed ? DIMMED_ALPHA : 1 });
+        box = boxUnion(box, entityBox(e));
+      }
     }
   }
   if (opts.sheet) return { entities, box: sheetBox(opts.sheet), scale: opts.sheet.scale };

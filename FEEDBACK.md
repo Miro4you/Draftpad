@@ -37,3 +37,8 @@ Gesammelte Rückmeldungen vom iPad-Test und ihr Stand.
 | 30 | Streckenlast (Pfeilreihe entlang einer Linie, z. B. q = 2 kN/m) | ✓ von Anfang bis Ende ziehen, Höhe über den Griff |
 | 31 | Lagersymbole: Festlager, Loslager, Einspannung (Freikörperbild) | ✓ plus Gelenk; Einspannung am Linienende zeigt in Linienrichtung |
 | 32 | Video: erster Frame = Endergebnis (sonst weiße Vorschaubilder) | ✓ 0,7 s Ergebnis, dann Überblendung zum leeren Blatt |
+| 33 | Schraffur: auch andere Winkel als 45° | ✓ Drehung −90…90° in 5°-Schritten im Schraffur-Menü, wirkt auf alle Muster; Antippen einer Schraffur übernimmt sie |
+| 34 | Fläche füllen | ✓ Muster „Fläche füllen“ (volle Farbe in der Stiftfarbe), passt sich wie die Schraffur an; liegt unter den Linien der Ebene; PDF/SVG/PNG und Zeitraffer |
+| 35 | Lager: Durchmesser statt nur Lagercode | ✓ Katalog zeigt „6204 · 20×47×14“ (d × D × B) und die Beschreibung mit Bohrung, Außen-Ø, Breite |
+| 36 | Export als Icon im Schnellzugriff oben rechts | ✓ Download-Icon neben der Kamera; Menüeintrag bleibt |
+| 16 | (Nachtrag) Tastatur klappt noch ab und zu auf | offen – seltener geworden, weiter beobachten |

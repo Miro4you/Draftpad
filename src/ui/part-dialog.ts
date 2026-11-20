@@ -1,4 +1,4 @@
-import { PART_ANGLES, partGeometry, PARTS, partLabel, type PartKind, type PartSpec, type PartView } from '../core/parts';
+import { PART_ANGLES, partGeometry, PARTS, partLabel, sizeCaption, type PartKind, type PartSpec, type PartView } from '../core/parts';
 import { baseDialog, finish } from './dialogs';
 import { h } from './dom';
 
@@ -108,7 +108,7 @@ export function askPart(initial: PartSpec): Promise<PartSpec | null> {
       const info = PARTS[spec.kind];
       for (const [k, b] of kindBtns) b.classList.toggle('active', k === spec.kind);
       (sizeField.querySelector('.size-label') as HTMLElement).textContent = info.sizeLabel;
-      segButtons(sizes, info.sizes.map((s) => ({ id: s, label: s })), spec.size, (id) => {
+      segButtons(sizes, info.sizes.map((s) => ({ id: s, label: sizeCaption(spec.kind, s) })), spec.size, (id) => {
         spec.size = id;
         if (info.length && !info.length.values.includes(spec.length)) spec.length = info.length.def(id);
       });
@@ -121,7 +121,7 @@ export function askPart(initial: PartSpec): Promise<PartSpec | null> {
       segButtons(angles, PART_ANGLES.map((a) => ({ id: String(a), label: a === null ? 'frei' : `${a}°` })), String(spec.angle ?? null), (id) => {
         spec.angle = id === 'null' ? null : Number(id);
       });
-      label.textContent = partLabel(spec);
+      label.textContent = partLabel(spec) + (spec.kind === 'bearing' ? ' – d = Bohrung, D = Außen-Ø, B = Breite (mm)' : '');
       requestAnimationFrame(() => drawPreview(canvas, spec));
     }
 
