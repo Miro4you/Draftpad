@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CAD-Test</title>
+</head>
+<body>
+<header>
+  <strong>CAD-Test</strong>
+  <span id="core" class="core busy">Kern lädt …</span>
+  <nav class="tools">
+    <button data-tool="select" title="Auswahl (V)">Auswahl</button>
+    <button data-tool="line" title="Linienzug (L)">Linie</button>
+    <button data-tool="rect" title="Rechteck (R)">Rechteck</button>
+    <button data-tool="circle" title="Kreis (C)">Kreis</button>
+    <span class="sep"></span>
+    <button id="add-gear">Zahnrad</button>
+    <button id="add-cycloid">Zykloide</button>
+    <button id="add-formula">Formel</button>
+    <span class="sep"></span>
+    <button id="undo" title="Rückgängig (⌘Z)">↶</button>
+    <button id="fit" title="Einpassen">⤢</button>
+    <button id="clear" title="Skizze leeren">✕</button>
+  </nav>
+</header>
+<main>
+  <section class="pane"><canvas id="sketch"></canvas><div id="live" class="live"></div></section>
+  <section class="pane" id="view"></section>
+  <aside>
+    <div id="props"></div>
+    <h3>Körper</h3>
+    <div class="grid">
+      <label>Höhe mm<input id="height" type="number" inputmode="decimal" value="8" step="0.5"></label>
+      <label>Kanten oben/unten verrunden r<input id="fillet" type="number" inputmode="decimal" value="0" step="0.1" min="0"></label>
+    </div>
+    <p id="err" class="err"></p>
+    <h3>Messung</h3>
+    <dl id="timings"></dl>
+    <h3>Ausgabe</h3>
+    <label>Teilname<input id="name" value="Teil"></label>
+    <div class="row"><button id="dl-step">STEP</button><button id="dl-stl">STL</button><button id="dl-3mf">3MF (Bambu Studio)</button></div>
+    <details>
+      <summary>An Projekt-FEM senden</summary>
+      <label>Adresse<input id="fem-addr" placeholder="http://192.168.1.20:8790" autocapitalize="off" spellcheck="false"></label>
+      <label>Schlüssel<input id="fem-key" autocapitalize="off" spellcheck="false"></label>
+      <button id="send-fem">Senden</button>
+      <p id="fem-msg" class="hint"></p>
+    </details>
+  </aside>
+</main>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
